@@ -11,6 +11,22 @@ st.set_page_config(
 
 st.title("🏥 PhysioAI — Clinical Assessment Tool")
 st.caption("AI-assisted physiotherapy screening powered by Databricks GPT")
+
+# Disable browser autocomplete on all input fields
+st.markdown("""
+    <style>
+    input[type=text], textarea { autocomplete: off !important; }
+    </style>
+    <script>
+    setTimeout(function() {
+        document.querySelectorAll('input, textarea').forEach(function(el) {
+            el.setAttribute('autocomplete', 'off');
+            el.setAttribute('autocomplete', 'new-password');
+        });
+    }, 500);
+    </script>
+""", unsafe_allow_html=True)
+
 st.divider()
 
 # ── ROW 1: SECTIONS 1 AND 2 SIDE BY SIDE ─────────────────
