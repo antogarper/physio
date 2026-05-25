@@ -51,7 +51,7 @@ with col_s2:
     st.subheader("② Main Complaint")
     main_complaint = st.text_area(
         "Describe the patient's main problem *",
-        placeholder="e.g. Difficulty walking after knee surgery, loss of balance when standing, limited shoulder mobility, weakness in left arm after stroke, numbness in hands...",
+        placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
         height=120
     )
     body_area = st.text_input("Body Area Affected *", placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
@@ -122,7 +122,7 @@ if run:
     else:
         symptoms_text = ", ".join(symptoms) if symptoms else "Not specified"
 
-        prompt = f"""You are an expert physiotherapist assistant. Analyze the following patient data and provide a structured clinical assessment.
+        prompt = f"""You are an expert physiotherapist assistant. Analyze the following patient data and return ONLY a valid JSON object, with no extra text, no markdown, no backticks.
 
 PATIENT PROFILE:
 - Age: {age} | Gender: {gender}
@@ -147,16 +147,46 @@ CLINICAL HISTORY:
 - Current treatments / medications: {current_treatments}
 - Additional information: {additional_info}
 
-Please provide:
-1. MOST LIKELY DIAGNOSIS – with brief clinical reasoning
-2. DIFFERENTIAL DIAGNOSES – 2 or 3 alternatives to consider
-3. RED FLAGS – list any that are present, or state "None identified"
-4. TREATMENT PLAN – broken into phases (Acute / Recovery / Functional)
-5. HOME EXERCISES OR ACTIVITIES – 3 to 5 specific recommendations
-6. REFERRAL RECOMMENDATION – whether further imaging or specialist is needed
-
-IMPORTANT: Please write your entire response in {language}.
-"""
+Return this exact JSON structure (all text in {language}):
+{{
+  "primary_diagnosis": "Name of the most likely condition",
+  "diagnosis_reasoning": "2-3 sentences explaining why this is the most likely diagnosis",
+  "confidence": "High / Medium / Low",
+  "differential_diagnoses": [
+    {{"name": "Condition name", "reason": "Brief reason why it must be considered"}},
+    {{"name": "Condition name", "reason": "Brief reason why it must be considered"}},
+    {{"name": "Condition name", "reason": "Brief reason why it must be considered"}}
+  ],
+  "red_flags": ["flag 1", "flag 2"],
+  "treatment": {{
+    "acute": {{
+      "phase": "Acute Phase (Week 1-2)",
+      "goals": "Goals for this phase",
+      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
+    }},
+    "recovery": {{
+      "phase": "Recovery Phase (Week 3-6)",
+      "goals": "Goals for this phase",
+      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
+    }},
+    "functional": {{
+      "phase": "Functional Phase (Week 7+)",
+      "goals": "Goals for this phase",
+      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
+    }}
+  }},
+  "home_exercises": [
+    {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
+    {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
+    {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
+    {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}}
+  ],
+  "referral": {{
+    "needed": "Yes / No",
+    "reason": "Explanation or null"
+  }},
+  "follow_up": "Recommended follow-up timeframe"
+}}"""
 
         with st.spinner("🤖 Analyzing patient data... please wait"):
             try:
@@ -170,7 +200,7 @@ IMPORTANT: Please write your entire response in {language}.
                     },
                     json={
                         "model": "databricks-gpt-oss-120b",
-                        "max_tokens": 1500,
+                        "max_tokens": 3000,
                         "messages": [{"role": "user", "content": prompt}]
                     }
                 )
@@ -180,19 +210,102 @@ IMPORTANT: Please write your entire response in {language}.
                 if "choices" in result:
                     content = result["choices"][0]["message"]["content"]
                     if isinstance(content, list):
-                        answer = " ".join(block["text"] for block in content if block.get("type") == "text")
+                        raw = " ".join(block["text"] for block in content if block.get("type") == "text")
                     else:
-                        answer = content
+                        raw = content
 
+                    # Clean and parse JSON
+                    clean = raw.replace("```json", "").replace("```", "").strip()
+                    data = json.loads(clean)
+
+                    # ── DISPLAY RESULTS ───────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
-                    st.success(f"✅ Assessment complete — response in {language}")
-                    st.markdown(answer)
+
+                    # PRIMARY DIAGNOSIS
+                    confidence_color = {"High": "green", "Medium": "orange", "Low": "red"}.get(data.get("confidence", ""), "green")
+                    st.markdown(f"""
+                    <div style="background-color:#f0f8ff; padding:20px; border-radius:10px; border-left:6px solid #1f77b4; margin-bottom:16px">
+                        <h2 style="margin:0; color:#1f77b4;">🔍 {data.get('primary_diagnosis', '')}</h2>
+                        <p style="margin:8px 0 4px 0; color:#333;">{data.get('diagnosis_reasoning', '')}</p>
+                        <span style="background-color:{confidence_color}; color:white; padding:3px 12px; border-radius:20px; font-size:13px;">
+                            Confidence: {data.get('confidence', '')}
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # RED FLAGS
+                    red_flags = data.get("red_flags", [])
+                    if red_flags:
+                        st.error("🚨 **Red Flags Identified:**")
+                        for flag in red_flags:
+                            st.markdown(f"- ⚠️ {flag}")
+                    else:
+                        st.success("✅ No red flags identified")
+
+                    st.markdown("---")
+                    col_diag, col_ref = st.columns(2)
+
+                    # DIFFERENTIAL DIAGNOSES
+                    with col_diag:
+                        st.markdown("### 🔄 Differential Diagnoses")
+                        for i, diff in enumerate(data.get("differential_diagnoses", []), 1):
+                            st.markdown(f"""
+                            <div style="background:#f9f9f9; border-radius:8px; padding:12px; margin-bottom:8px; border-left:4px solid #aaa;">
+                                <strong>{i}. {diff.get('name', '')}</strong><br>
+                                <span style="color:#555; font-size:13px;">{diff.get('reason', '')}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                    # REFERRAL
+                    with col_ref:
+                        st.markdown("### 📅 Referral & Follow-up")
+                        referral = data.get("referral", {})
+                        if referral.get("needed") == "Yes":
+                            st.warning(f"**Referral needed:** {referral.get('reason', '')}")
+                        else:
+                            st.success("**No referral needed**")
+                        st.info(f"**Follow-up:** {data.get('follow_up', '')}")
+
+                    st.markdown("---")
+
+                    # TREATMENT PLAN
+                    st.markdown("### 💊 Treatment Plan")
+                    treatment = data.get("treatment", {})
+                    tab1, tab2, tab3 = st.tabs(["🔴 Acute Phase", "🟡 Recovery Phase", "🟢 Functional Phase"])
+
+                    for tab, phase_key in zip([tab1, tab2, tab3], ["acute", "recovery", "functional"]):
+                        with tab:
+                            phase = treatment.get(phase_key, {})
+                            st.markdown(f"**Goals:** {phase.get('goals', '')}")
+                            st.markdown("**Interventions:**")
+                            for item in phase.get("interventions", []):
+                                st.markdown(f"- {item}")
+
+                    st.markdown("---")
+
+                    # HOME EXERCISES
+                    st.markdown("### 🏃 Home Exercise Program")
+                    exercises = data.get("home_exercises", [])
+                    cols = st.columns(len(exercises)) if exercises else []
+                    for col, ex in zip(cols, exercises):
+                        with col:
+                            st.markdown(f"""
+                            <div style="background:#f0fff0; border-radius:10px; padding:14px; border-top:4px solid #2ca02c; height:100%;">
+                                <strong>💪 {ex.get('name', '')}</strong><br><br>
+                                <span style="font-size:13px; color:#333;">{ex.get('description', '')}</span><br><br>
+                                <span style="font-size:12px; color:#2ca02c;">🕐 {ex.get('frequency', '')}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+
                     st.divider()
                     st.warning("⚠️ AI-assisted screening only. Must be reviewed by a qualified physiotherapist.")
 
                 else:
                     st.error("API Error: " + json.dumps(result, indent=2))
 
+            except json.JSONDecodeError:
+                st.error("Could not parse the AI response. Please try again.")
+                st.code(raw)
             except Exception as e:
                 st.error(f"Something went wrong: {str(e)}")
