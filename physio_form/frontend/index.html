@@ -210,17 +210,14 @@ input[type=range] { accent-color: #1a3a5c; flex: 1; }
   </div>
 </div>
 
-<div style="display:flex; gap:40px; align-items:flex-start; margin-top:4px;">
-  <div style="flex:1;">
-    <div class="lang-bar">⑤ Response Language</div>
-    <div class="lang-row">
-      <label><input type="radio" name="lang" value="English" checked> English</label>
-      <label><input type="radio" name="lang" value="Spanish"> Spanish</label>
-      <label><input type="radio" name="lang" value="Finnish"> Finnish</label>
-    </div>
+<div style="display:inline-block; min-width:300px; margin-top:4px;">
+  <div class="lang-bar" style="display:inline-block; padding:7px 14px;">⑤ Response Language</div>
+  <div class="lang-row">
+    <label><input type="radio" name="lang" value="English" checked> English</label>
+    <label><input type="radio" name="lang" value="Spanish"> Spanish</label>
+    <label><input type="radio" name="lang" value="Finnish"> Finnish</label>
   </div>
-  <div style="padding-top:4px;">
-    <div style="height:29px;"></div>
+  <div style="margin-top:10px;">
     <button class="run-btn" onclick="submit()">🔍 Run AI Assessment</button>
   </div>
 </div>
