@@ -13,119 +13,97 @@ st.title("🏥 PhysioAI — Clinical Assessment Tool")
 st.caption("AI-assisted physiotherapy screening powered by Databricks GPT")
 st.divider()
 
-# ── SECTION 1: PATIENT PROFILE ────────────────────────────
-st.subheader("① Patient Profile")
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    age = st.number_input("Age (years)", min_value=1, max_value=120, value=45)
-with col2:
-    gender = st.selectbox("Gender", ["Male", "Female", "Non-binary", "Prefer not to say"])
-with col3:
-    weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
-with col4:
-    height = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
+# ── ROW 1: SECTIONS 1 AND 2 SIDE BY SIDE ─────────────────
+col_s1, col_s2 = st.columns(2)
 
-col5, col6 = st.columns(2)
-with col5:
+with col_s1:
+    st.subheader("① Patient Profile")
+    c1, c2 = st.columns(2)
+    with c1:
+        age = st.number_input("Age (years)", min_value=1, max_value=120, value=45)
+    with c2:
+        gender = st.selectbox("Gender", ["Male", "Female", "Non-binary", "Prefer not to say"])
+    c3, c4 = st.columns(2)
+    with c3:
+        weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
+    with c4:
+        height = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
     occupation = st.text_input("Occupation", placeholder="e.g. Office worker, nurse, construction worker...")
-with col6:
     physical_activity = st.text_input("Physical Activity Level", placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
 
-st.divider()
-
-# ── SECTION 2: MAIN COMPLAINT ─────────────────────────────
-st.subheader("② Main Complaint")
-
-main_complaint = st.text_area(
-    "Describe the patient's main problem *",
-    placeholder="e.g. Difficulty walking after knee surgery, loss of balance when standing, limited shoulder mobility, weakness in left arm after stroke, numbness in hands...",
-    height=100
-)
-
-col7, col8 = st.columns(2)
-with col7:
+with col_s2:
+    st.subheader("② Main Complaint")
+    main_complaint = st.text_area(
+        "Describe the patient's main problem *",
+        placeholder="e.g. Difficulty walking after knee surgery, loss of balance when standing, limited shoulder mobility, weakness in left arm after stroke, numbness in hands...",
+        height=120
+    )
     body_area = st.text_input("Body Area Affected *", placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
-with col8:
     problem_duration = st.text_input("How long has this problem existed?", placeholder="e.g. 2 weeks, 6 months, since birth...")
-
-problem_onset = st.selectbox(
-    "How did the problem start?",
-    ["Sudden (accident / injury)", "Gradual (developed over time)", "After surgery", "After illness", "Unknown / no clear cause"]
-)
+    problem_onset = st.selectbox(
+        "How did the problem start?",
+        ["Sudden (accident / injury)", "Gradual (developed over time)", "After surgery", "After illness", "Unknown / no clear cause"]
+    )
 
 st.divider()
 
-# ── SECTION 3: SYMPTOMS ───────────────────────────────────
-st.subheader("③ Symptoms")
+# ── ROW 2: SECTIONS 3 AND 4 SIDE BY SIDE ─────────────────
+col_s3, col_s4 = st.columns(2)
 
-col9, col10 = st.columns(2)
-with col9:
+with col_s3:
+    st.subheader("③ Symptoms")
     has_pain = st.checkbox("Pain is present", value=True)
-with col10:
     if has_pain:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-        st.info("No pain reported")
 
-symptoms = st.multiselect(
-    "Select all symptoms that apply:",
-    [
-        "Pain", "Stiffness", "Limited range of motion", "Weakness / loss of strength",
-        "Numbness / tingling", "Swelling / inflammation", "Loss of balance",
-        "Difficulty walking", "Muscle spasms", "Fatigue", "Instability / giving way",
-        "Clicking / popping sounds", "Difficulty with daily activities", "Poor posture"
-    ]
-)
+    symptoms = st.multiselect(
+        "Select all symptoms that apply:",
+        [
+            "Pain", "Stiffness", "Limited range of motion", "Weakness / loss of strength",
+            "Numbness / tingling", "Swelling / inflammation", "Loss of balance",
+            "Difficulty walking", "Muscle spasms", "Fatigue", "Instability / giving way",
+            "Clicking / popping sounds", "Difficulty with daily activities", "Poor posture"
+        ]
+    )
+    aggravating_factors = st.text_input("What makes it worse?", placeholder="e.g. Walking, sitting too long, lifting...")
+    relieving_factors = st.text_input("What makes it better?", placeholder="e.g. Rest, heat, ice, specific positions...")
 
-aggravating_factors = st.text_input(
-    "What makes it worse?",
-    placeholder="e.g. Walking, sitting too long, lifting, certain movements, morning time..."
-)
-relieving_factors = st.text_input(
-    "What makes it better?",
-    placeholder="e.g. Rest, heat, ice, specific positions, movement..."
-)
-
-st.divider()
-
-# ── SECTION 4: CLINICAL HISTORY ───────────────────────────
-st.subheader("④ Clinical History")
-
-col11, col12 = st.columns(2)
-with col11:
+with col_s4:
+    st.subheader("④ Clinical History")
     previous_history = st.text_area(
         "Previous injuries, surgeries or medical conditions",
         placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke, fractures...",
-        height=80
+        height=120
     )
-with col12:
     current_treatments = st.text_area(
         "Current treatments or medications",
         placeholder="e.g. Taking ibuprofen, wearing a brace, doing home exercises...",
-        height=80
+        height=100
+    )
+    additional_info = st.text_area(
+        "Any other relevant information",
+        placeholder="e.g. Patient goals, work requirements, sport they want to return to...",
+        height=100
     )
 
-additional_info = st.text_area(
-    "Any other relevant information",
-    placeholder="e.g. Patient goals, work requirements, sport they want to return to, daily life limitations...",
-    height=80
-)
-
 st.divider()
 
-# ── SECTION 5: LANGUAGE ───────────────────────────────────
-st.subheader("⑤ Response Language")
-language = st.radio(
-    "Select the language for the AI assessment report:",
-    options=["English", "Spanish", "Finnish"],
-    horizontal=True
-)
+# ── LANGUAGE + BUTTON ROW ─────────────────────────────────
+col_lang, col_btn = st.columns([3, 1])
 
-st.divider()
+with col_lang:
+    st.subheader("⑤ Response Language")
+    language = st.radio(
+        "Select the language for the AI assessment report:",
+        options=["English", "Spanish", "Finnish"],
+        horizontal=True
+    )
 
-# ── RUN BUTTON ────────────────────────────────────────────
-run = st.button("🔍 Run AI Assessment", type="primary", use_container_width=True)
+with col_btn:
+    st.subheader(" ")  # spacer to align with language section
+    run = st.button("🔍 Run AI Assessment", type="primary")
 
 # ── AI CALL ───────────────────────────────────────────────
 if run:
