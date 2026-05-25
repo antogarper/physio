@@ -379,7 +379,7 @@ function submitForm() {
 """
 
 # ── RENDER THE FORM ───────────────────────────────────────
-components.html(FORM_HTML, height=820, scrolling=False)
+components.html(FORM_HTML, height=1050, scrolling=False)
 
 # ── PROCESS WHEN SUBMITTED ────────────────────────────────
 if params.get("submitted") == "1":
