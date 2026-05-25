@@ -10,369 +10,194 @@ st.markdown("""
 html, body, [class*="css"] { font-family: 'Segoe UI', sans-serif; }
 .stApp { background-color: #f4f7fb; }
 div[data-testid="stButton"] > button[kind="primary"] {
-    background-color: #1a3a5c !important;
-    border: none !important; border-radius: 8px !important;
-    color: white !important; font-weight: 700 !important;
-    padding: 12px 36px !important; font-size: 15px !important;
-    width: 100% !important;
+    background-color: #1a3a5c !important; border: none !important;
+    border-radius: 8px !important; color: white !important;
+    font-weight: 700 !important; padding: 12px 36px !important;
+    font-size: 15px !important;
 }
-div[data-testid="stButton"] > button[kind="primary"]:hover {
-    background-color: #0f2540 !important;
-}
+div[data-testid="stButton"] > button[kind="primary"]:hover { background-color: #0f2540 !important; }
+label { color: #1a3a5c !important; font-weight: 600 !important; font-size: 13px !important; }
+div[data-baseweb="input"] input { border: 1px solid #b8cfe8 !important; border-radius: 6px !important; }
+div[data-baseweb="input"] input:focus { border-color: #1a3a5c !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── INITIALIZE SESSION STATE ──────────────────────────────
-for key in ["age","gender","weight","height","occupation","physical_activity",
-            "main_complaint","body_area","problem_duration","problem_onset",
-            "has_pain","pain_intensity","aggravating","relieving",
-            "previous_history","current_treatments","additional_info","language"]:
+# ── SECTION HEADER ────────────────────────────────────────
+def section(title):
+    st.markdown(f"""
+    <div style="background:#1a3a5c;color:white;padding:8px 14px;border-radius:6px;
+                font-size:12px;font-weight:700;letter-spacing:1px;
+                text-transform:uppercase;margin-bottom:12px;">{title}</div>
+    """, unsafe_allow_html=True)
+
+# ── MIC COMPONENT ─────────────────────────────────────────
+def mic_input(label, key, placeholder=""):
+    """
+    Renders a Streamlit text_input with a mic button beside it.
+    The mic button lives in a tiny iframe but only captures speech
+    and writes it back via st.session_state using component value.
+    """
+    # Initialize
     if key not in st.session_state:
         st.session_state[key] = ""
 
-FORM_HTML = """
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-body { background: #f4f7fb; }
-.banner {
-    background: linear-gradient(135deg,#1a3a5c,#2e6da4);
-    padding: 24px 28px; border-radius: 12px; margin-bottom: 20px;
-}
-.banner .title { color: #ffffff; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-.banner .subtitle { color: #b8d4f0; font-size: 13px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
-.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
-.grid-2-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.section-bar {
-    background: #1a3a5c; color: white; padding: 8px 14px;
-    border-radius: 6px; font-size: 12px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;
-}
-.field { margin-bottom: 12px; }
-.field label { display: block; font-size: 12px; font-weight: 700; color: #1a3a5c; margin-bottom: 4px; }
-.mic-row { display: flex; gap: 6px; align-items: center; }
-.mic-row input, .mic-row select { flex: 1; }
-input[type=text], input[type=number], select {
-    width: 100%; padding: 8px 10px; border: 1px solid #b8cfe8;
-    border-radius: 6px; font-size: 13px; color: #1a3a5c; background: white; outline: none;
-}
-input:focus, select:focus { border-color: #1a3a5c; }
-.mic-btn {
-    padding: 7px 10px; background: #eaf1fb; border: 1px solid #b8cfe8;
-    border-radius: 6px; cursor: pointer; font-size: 15px; flex-shrink: 0;
-}
-.mic-btn.recording { background: #dce8f5; border-color: #1a3a5c; }
-.mic-status { font-size: 11px; color: #2e6da4; min-height: 13px; margin-top: 2px; }
-.pain-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-input[type=range] { accent-color: #1a3a5c; flex: 1; }
-.lang-bar {
-    background: #1a3a5c; color: white; padding: 8px 14px;
-    border-radius: 6px; font-size: 12px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;
-}
-.lang-row { display: flex; gap: 24px; margin-bottom: 16px; }
-.lang-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1a3a5c; font-weight: 600; cursor: pointer; }
-.error-msg {
-    color: #1a3a5c; background: #dce8f5; border-left: 4px solid #1a3a5c;
-    border-radius: 6px; padding: 10px 14px; font-size: 13px; display: none; margin-bottom: 10px;
-}
-</style>
+    col_field, col_mic = st.columns([10, 1])
 
-<div class="banner">
-    <div class="title">🏥 PhysioAI — Clinical Assessment Tool</div>
-    <div class="subtitle">AI-assisted physiotherapy screening</div>
-</div>
+    with col_field:
+        val = st.text_input(label, key=key, placeholder=placeholder)
 
-<div class="grid-2">
-  <div>
-    <div class="section-bar">① Patient Profile</div>
-    <div class="grid-4">
-      <div class="field"><label>Age</label><input type="number" id="age" value="45" min="1" max="120" oninput="sync()"></div>
-      <div class="field"><label>Gender</label>
-        <select id="gender" onchange="sync()">
-          <option>Male</option><option selected>Female</option>
-          <option>Non-binary</option><option>Prefer not to say</option>
-        </select>
-      </div>
-      <div class="field"><label>Weight (kg)</label><input type="number" id="weight" value="68" oninput="sync()"></div>
-      <div class="field"><label>Height (cm)</label><input type="number" id="height" value="165" oninput="sync()"></div>
-    </div>
-    <div class="field">
-      <label>Occupation</label>
-      <div class="mic-row">
-        <input type="text" id="occupation" placeholder="e.g. Office worker, nurse..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_occupation" onclick="toggleMic('occupation')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_occupation"></div>
-    </div>
-    <div class="field">
-      <label>Physical Activity Level</label>
-      <div class="mic-row">
-        <input type="text" id="physical_activity" placeholder="e.g. Sedentary, walks daily..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_physical_activity" onclick="toggleMic('physical_activity')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_physical_activity"></div>
-    </div>
-    <div class="section-bar" style="margin-top:8px;">③ Symptoms</div>
-    <div class="pain-row">
-      <input type="checkbox" id="has_pain" checked onchange="togglePain(); sync()">
-      <label for="has_pain" style="font-size:13px;color:#1a3a5c;font-weight:600;">Pain is present</label>
-    </div>
-    <div id="pain_block" class="field">
-      <label>Pain Intensity: <span id="pain_val">5</span>/10</label>
-      <input type="range" id="pain_intensity" min="0" max="10" value="5"
-        oninput="document.getElementById('pain_val').innerText=this.value; sync()">
-    </div>
-    <div class="field">
-      <label>What makes it worse?</label>
-      <div class="mic-row">
-        <input type="text" id="aggravating" placeholder="e.g. Walking, sitting too long..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_aggravating" onclick="toggleMic('aggravating')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_aggravating"></div>
-    </div>
-    <div class="field">
-      <label>What makes it better?</label>
-      <div class="mic-row">
-        <input type="text" id="relieving" placeholder="e.g. Rest, heat, ice..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_relieving" onclick="toggleMic('relieving')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_relieving"></div>
-    </div>
-  </div>
+    with col_mic:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        # Small mic-only component
+        mic_html = f"""
+        <style>
+        body{{margin:0;padding:0;background:transparent;}}
+        button{{
+            width:38px;height:38px;background:#eaf1fb;border:1px solid #b8cfe8;
+            border-radius:6px;cursor:pointer;font-size:16px;display:flex;
+            align-items:center;justify-content:center;
+        }}
+        button.on{{background:#dce8f5;border-color:#1a3a5c;}}
+        </style>
+        <button id="b" onclick="go()" title="Click to speak">🎤</button>
+        <script>
+        var rec=null, existing='';
+        function go(){{
+            if(rec){{rec.stop();return;}}
+            if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){{
+                alert('Use Chrome or Edge for voice input');return;
+            }}
+            var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+            rec=new SR();
+            rec.lang=navigator.language||'en-US';
+            rec.continuous=true;
+            rec.interimResults=true;
+            var btn=document.getElementById('b');
+            btn.innerText='⏹';btn.classList.add('on');
+            rec.onresult=function(e){{
+                var interim='',final='';
+                for(var i=e.resultIndex;i<e.results.length;i++){{
+                    if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+                    else interim+=e.results[i][0].transcript;
+                }}
+                if(final){{
+                    existing=existing+(existing&&!existing.endsWith(' ')?' ':'')+final;
+                    window.parent.postMessage({{
+                        isStreamlitMessage:true,
+                        type:'streamlit:setComponentValue',
+                        value: existing
+                    }},'*');
+                }}
+            }};
+            rec.onend=function(){{
+                rec=null;btn.innerText='🎤';btn.classList.remove('on');
+            }};
+            rec.onerror=function(){{
+                rec=null;btn.innerText='🎤';btn.classList.remove('on');
+            }};
+            rec.start();
+        }}
+        </script>
+        """
+        spoken = components.html(mic_html, height=42)
 
-  <div>
-    <div class="section-bar">② Main Complaint</div>
-    <div class="field">
-      <label>Describe the patient's main problem *</label>
-      <div class="mic-row">
-        <input type="text" id="main_complaint" placeholder="e.g. Difficulty walking after knee surgery..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_main_complaint" onclick="toggleMic('main_complaint')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_main_complaint"></div>
-    </div>
-    <div class="field">
-      <label>Body Area Affected *</label>
-      <div class="mic-row">
-        <input type="text" id="body_area" placeholder="e.g. Left knee, lower back..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_body_area" onclick="toggleMic('body_area')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_body_area"></div>
-    </div>
-    <div class="grid-2-inner">
-      <div class="field">
-        <label>How long has this problem existed?</label>
-        <div class="mic-row">
-          <input type="text" id="problem_duration" placeholder="e.g. 2 weeks, 6 months..." autocomplete="new-password" oninput="sync()">
-          <button class="mic-btn" id="mic_problem_duration" onclick="toggleMic('problem_duration')" title="Speak">🎤</button>
-        </div>
-        <div class="mic-status" id="st_problem_duration"></div>
-      </div>
-      <div class="field">
-        <label>How did the problem start?</label>
-        <select id="problem_onset" onchange="sync()">
-          <option>Sudden (accident / injury)</option>
-          <option>Gradual (developed over time)</option>
-          <option>After surgery</option>
-          <option>After illness</option>
-          <option>Unknown / no clear cause</option>
-        </select>
-      </div>
-    </div>
-    <div class="section-bar" style="margin-top:8px;">④ Clinical History</div>
-    <div class="field">
-      <label>Previous injuries, surgeries or medical conditions</label>
-      <div class="mic-row">
-        <input type="text" id="previous_history" placeholder="e.g. Knee surgery 2022, diabetes..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_previous_history" onclick="toggleMic('previous_history')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_previous_history"></div>
-    </div>
-    <div class="field">
-      <label>Current treatments or medications</label>
-      <div class="mic-row">
-        <input type="text" id="current_treatments" placeholder="e.g. Taking ibuprofen, wearing a brace..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_current_treatments" onclick="toggleMic('current_treatments')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_current_treatments"></div>
-    </div>
-    <div class="field">
-      <label>Any other relevant information</label>
-      <div class="mic-row">
-        <input type="text" id="additional_info" placeholder="e.g. Patient goals, sport they want to return to..." autocomplete="new-password" oninput="sync()">
-        <button class="mic-btn" id="mic_additional_info" onclick="toggleMic('additional_info')" title="Speak">🎤</button>
-      </div>
-      <div class="mic-status" id="st_additional_info"></div>
-    </div>
-  </div>
-</div>
+        # If mic returned a value, update session state and rerun
+        if spoken and spoken != st.session_state.get(key, ""):
+            st.session_state[key] = spoken
+            st.rerun()
 
-<div class="lang-bar">⑤ Response Language</div>
-<div class="lang-row">
-  <label><input type="radio" name="lang" value="English" checked onchange="sync()"> English</label>
-  <label><input type="radio" name="lang" value="Spanish" onchange="sync()"> Spanish</label>
-  <label><input type="radio" name="lang" value="Finnish" onchange="sync()"> Finnish</label>
-</div>
-<div class="error-msg" id="error_msg">⚠️ Please fill in Main Complaint and Body Area Affected.</div>
+    return st.session_state.get(key, "")
 
-<script>
-var activeRec = null;
-var activeField = null;
 
-function togglePain() {
-    document.getElementById('pain_block').style.display =
-        document.getElementById('has_pain').checked ? 'block' : 'none';
-}
-
-// Sync all values to sessionStorage continuously
-function sync() {
-    var data = {
-        age:               document.getElementById('age').value,
-        gender:            document.getElementById('gender').value,
-        weight:            document.getElementById('weight').value,
-        height:            document.getElementById('height').value,
-        occupation:        document.getElementById('occupation').value,
-        physical_activity: document.getElementById('physical_activity').value,
-        main_complaint:    document.getElementById('main_complaint').value,
-        body_area:         document.getElementById('body_area').value,
-        problem_duration:  document.getElementById('problem_duration').value,
-        problem_onset:     document.getElementById('problem_onset').value,
-        has_pain:          document.getElementById('has_pain').checked ? '1' : '0',
-        pain_intensity:    document.getElementById('pain_intensity').value,
-        aggravating:       document.getElementById('aggravating').value,
-        relieving:         document.getElementById('relieving').value,
-        previous_history:  document.getElementById('previous_history').value,
-        current_treatments:document.getElementById('current_treatments').value,
-        additional_info:   document.getElementById('additional_info').value,
-        language:          (document.querySelector('input[name=lang]:checked') || {value:'English'}).value
-    };
-    window.parent.postMessage({type: 'physio_data', data: data}, '*');
-}
-
-// Sync on load
-window.onload = function() { sync(); };
-
-function toggleMic(fieldId) {
-    if (activeRec) {
-        activeRec.stop();
-        activeRec = null;
-        if (activeField !== fieldId) { startMic(fieldId); }
-        return;
-    }
-    startMic(fieldId);
-}
-
-function startMic(fieldId) {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        document.getElementById('st_' + fieldId).innerText = '⚠️ Use Chrome or Edge';
-        return;
-    }
-    var SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var rec = new SR();
-    rec.lang = navigator.language || 'en-US';
-    rec.continuous = true;
-    rec.interimResults = true;
-    activeRec = rec;
-    activeField = fieldId;
-
-    var btn    = document.getElementById('mic_' + fieldId);
-    var status = document.getElementById('st_' + fieldId);
-    var field  = document.getElementById(fieldId);
-    var existing = field.value;
-
-    btn.innerText = '⏹';
-    btn.classList.add('recording');
-    status.innerText = '🔴 Listening... click ⏹ to stop';
-
-    rec.onresult = function(e) {
-        var interim = '', final = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) final += e.results[i][0].transcript;
-            else interim += e.results[i][0].transcript;
-        }
-        var sep = (existing && !existing.endsWith(' ')) ? ' ' : '';
-        field.value = existing + sep + final;
-        if (final) { existing = field.value; sync(); }
-        status.innerText = interim ? '💬 ' + interim : '🔴 Listening...';
-    };
-
-    rec.onend = function() {
-        activeRec = null; activeField = null;
-        btn.innerText = '🎤';
-        btn.classList.remove('recording');
-        status.innerText = '✅ Done';
-        sync();
-        setTimeout(function() { status.innerText = ''; }, 2000);
-    };
-
-    rec.onerror = function(e) {
-        activeRec = null; activeField = null;
-        btn.innerText = '🎤';
-        btn.classList.remove('recording');
-        status.innerText = '⚠️ ' + e.error;
-    };
-
-    rec.start();
-}
-</script>
-"""
-
-# ── SESSION STATE FOR FORM DATA ───────────────────────────
-if "form_data" not in st.session_state:
-    st.session_state.form_data = {}
-
-# ── JAVASCRIPT BRIDGE: receive form data via postMessage ──
+# ── BANNER ────────────────────────────────────────────────
 st.markdown("""
-<script>
-window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'physio_data') {
-        // Store in parent sessionStorage as bridge
-        window.sessionStorage.setItem('physio_form', JSON.stringify(e.data.data));
-    }
-});
-</script>
+<div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4);padding:24px 28px;
+            border-radius:12px;margin-bottom:24px;">
+    <div style="color:#ffffff;font-size:24px;font-weight:700;margin-bottom:4px;">
+        🏥 PhysioAI — Clinical Assessment Tool
+    </div>
+    <div style="color:#b8d4f0;font-size:13px;">AI-assisted physiotherapy screening</div>
+</div>
 """, unsafe_allow_html=True)
 
-# ── RENDER FORM ───────────────────────────────────────────
-components.html(FORM_HTML, height=1000, scrolling=False)
+# ── ROW 1 ─────────────────────────────────────────────────
+col_s1, col_s2 = st.columns(2)
 
-# ── STREAMLIT BUTTON (outside iframe — always works) ──────
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    run = st.button("🔍 Run AI Assessment", type="primary")
+with col_s1:
+    section("① Patient Profile")
+    c1, c2 = st.columns(2)
+    with c1:
+        age = st.number_input("Age (years)", min_value=1, max_value=120, value=45)
+    with c2:
+        gender = st.selectbox("Gender", ["Male", "Female", "Non-binary", "Prefer not to say"])
+    c3, c4 = st.columns(2)
+    with c3:
+        weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
+    with c4:
+        height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
+    occupation        = mic_input("Occupation", "occupation", "e.g. Office worker, nurse...")
+    physical_activity = mic_input("Physical Activity Level", "physical_activity", "e.g. Sedentary, walks daily...")
 
-# ── READ DATA FROM QUERY PARAMS OR SESSION STATE ──────────
+with col_s2:
+    section("② Main Complaint")
+    main_complaint   = mic_input("Describe the patient's main problem *", "main_complaint", "e.g. Difficulty walking after knee surgery...")
+    body_area        = mic_input("Body Area Affected *", "body_area", "e.g. Left knee, lower back, right shoulder...")
+    problem_duration = mic_input("How long has this problem existed?", "problem_duration", "e.g. 2 weeks, 6 months...")
+    problem_onset    = st.selectbox("How did the problem start?", [
+        "Sudden (accident / injury)", "Gradual (developed over time)",
+        "After surgery", "After illness", "Unknown / no clear cause"
+    ])
+
+st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
+
+# ── ROW 2 ─────────────────────────────────────────────────
+col_s3, col_s4 = st.columns(2)
+
+with col_s3:
+    section("③ Symptoms")
+    has_pain = st.checkbox("Pain is present", value=True)
+    if has_pain:
+        pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
+    else:
+        pain_intensity = 0
+    aggravating = mic_input("What makes it worse?", "aggravating", "e.g. Walking, sitting too long...")
+    relieving   = mic_input("What makes it better?", "relieving", "e.g. Rest, heat, ice...")
+
+with col_s4:
+    section("④ Clinical History")
+    previous_history   = mic_input("Previous injuries, surgeries or medical conditions", "previous_history", "e.g. Knee surgery 2022, diabetes...")
+    current_treatments = mic_input("Current treatments or medications", "current_treatments", "e.g. Taking ibuprofen, wearing a brace...")
+    additional_info    = mic_input("Any other relevant information", "additional_info", "e.g. Patient goals, sport they want to return to...")
+
+st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
+
+# ── LANGUAGE ──────────────────────────────────────────────
+section("⑤ Response Language")
+language = st.radio("", options=["English", "Spanish", "Finnish"], horizontal=True)
+
+st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
+
+# ── BUTTON ────────────────────────────────────────────────
+run = st.button("🔍 Run AI Assessment", type="primary")
+
+# ── AI CALL ───────────────────────────────────────────────
 if run:
-    # Read values from st.session_state keys set by the form
-    d = st.session_state.form_data
+    main_complaint    = st.session_state.get("main_complaint", "")
+    body_area         = st.session_state.get("body_area", "")
+    occupation        = st.session_state.get("occupation", "")
+    physical_activity = st.session_state.get("physical_activity", "")
+    problem_duration  = st.session_state.get("problem_duration", "")
+    aggravating       = st.session_state.get("aggravating", "")
+    relieving         = st.session_state.get("relieving", "")
+    previous_history  = st.session_state.get("previous_history", "")
+    current_treatments= st.session_state.get("current_treatments", "")
+    additional_info   = st.session_state.get("additional_info", "")
 
-    # Fallback: try query params
-    p = st.query_params
-    age               = int(p.get("age", d.get("age", 45)))
-    gender            = p.get("gender", d.get("gender", ""))
-    weight            = float(p.get("weight", d.get("weight", 70)))
-    height_val        = float(p.get("height", d.get("height", 170)))
-    occupation        = p.get("occupation", d.get("occupation", ""))
-    physical_activity = p.get("physical_activity", d.get("physical_activity", ""))
-    main_complaint    = p.get("main_complaint", d.get("main_complaint", ""))
-    body_area         = p.get("body_area", d.get("body_area", ""))
-    problem_duration  = p.get("problem_duration", d.get("problem_duration", ""))
-    problem_onset     = p.get("problem_onset", d.get("problem_onset", ""))
-    has_pain          = p.get("has_pain", d.get("has_pain", "1")) == "1"
-    pain_intensity    = int(p.get("pain_intensity", d.get("pain_intensity", 5)))
-    aggravating       = p.get("aggravating", d.get("aggravating", ""))
-    relieving         = p.get("relieving", d.get("relieving", ""))
-    previous_history  = p.get("previous_history", d.get("previous_history", ""))
-    current_treatments= p.get("current_treatments", d.get("current_treatments", ""))
-    additional_info   = p.get("additional_info", d.get("additional_info", ""))
-    language          = p.get("language", d.get("language", "English"))
-
-    if not str(main_complaint).strip() or not str(body_area).strip():
+    if not main_complaint.strip() or not body_area.strip():
         st.markdown("""
-        <div style="background:#dce8f5; border-left:4px solid #1a3a5c; border-radius:6px;
-                    padding:12px 16px; color:#1a3a5c; font-size:14px; text-align:center;">
-            ⚠️ Please fill in <strong>Main Complaint</strong> and <strong>Body Area Affected</strong>
-            in the form above, then click the button again.
+        <div style="background:#dce8f5;border-left:4px solid #1a3a5c;border-radius:6px;
+                    padding:12px 16px;color:#1a3a5c;font-size:14px;">
+            ⚠️ Please fill in <strong>Main Complaint</strong> and <strong>Body Area Affected</strong>.
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -451,35 +276,34 @@ Return this exact JSON structure (all text in {language}):
                     data = json.loads(clean)
 
                     st.markdown("""
-                    <div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4); padding:16px 24px;
-                                border-radius:10px; margin-bottom:20px; margin-top:16px;">
-                        <div style="color:white; font-size:18px; font-weight:700;">📋 AI Assessment Results</div>
+                    <div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4);padding:16px 24px;
+                                border-radius:10px;margin-bottom:20px;margin-top:16px;">
+                        <div style="color:white;font-size:18px;font-weight:700;">📋 AI Assessment Results</div>
                     </div>
                     """, unsafe_allow_html=True)
 
                     conf = data.get("confidence", "High")
                     conf_bg = {"High": "#1a3a5c", "Medium": "#2e6da4", "Low": "#6699cc"}.get(conf, "#1a3a5c")
                     st.markdown(f"""
-                    <div style="background:#eaf1fb; border:1px solid #b8cfe8; border-radius:10px; padding:20px; margin-bottom:16px;">
-                        <div style="font-size:11px; font-weight:700; color:#2e6da4; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;">Primary Diagnosis</div>
-                        <div style="font-size:22px; font-weight:700; color:#1a3a5c; margin-bottom:8px;">{data.get('primary_diagnosis', '')}</div>
-                        <div style="font-size:14px; color:#3a5a7c; line-height:1.6; margin-bottom:12px;">{data.get('diagnosis_reasoning', '')}</div>
-                        <span style="background:{conf_bg}; color:white; padding:4px 14px; border-radius:20px; font-size:12px; font-weight:600;">Confidence: {conf}</span>
+                    <div style="background:#eaf1fb;border:1px solid #b8cfe8;border-radius:10px;padding:20px;margin-bottom:16px;">
+                        <div style="font-size:11px;font-weight:700;color:#2e6da4;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Primary Diagnosis</div>
+                        <div style="font-size:22px;font-weight:700;color:#1a3a5c;margin-bottom:8px;">{data.get('primary_diagnosis','')}</div>
+                        <div style="font-size:14px;color:#3a5a7c;line-height:1.6;margin-bottom:12px;">{data.get('diagnosis_reasoning','')}</div>
+                        <span style="background:{conf_bg};color:white;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;">Confidence: {conf}</span>
                     </div>
                     """, unsafe_allow_html=True)
 
                     red_flags = data.get("red_flags", [])
                     if red_flags:
-                        flags_html = "".join(f"<li>{f}</li>" for f in red_flags)
                         st.markdown(f"""
-                        <div style="background:#dce8f5; border:1px solid #1a3a5c; border-radius:8px; padding:14px 18px; margin-bottom:16px;">
-                            <div style="font-weight:700; color:#1a3a5c; margin-bottom:6px;">⚠️ Red Flags Identified</div>
-                            <ul style="margin:0; padding-left:18px; color:#1a3a5c; font-size:14px;">{flags_html}</ul>
+                        <div style="background:#dce8f5;border:1px solid #1a3a5c;border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+                            <div style="font-weight:700;color:#1a3a5c;margin-bottom:6px;">⚠️ Red Flags Identified</div>
+                            <ul style="margin:0;padding-left:18px;color:#1a3a5c;font-size:14px;">{"".join(f"<li>{f}</li>" for f in red_flags)}</ul>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.markdown("""
-                        <div style="background:#eaf1fb; border:1px solid #b8cfe8; border-radius:8px; padding:12px 18px; margin-bottom:16px; color:#1a3a5c; font-size:14px;">
+                        <div style="background:#eaf1fb;border:1px solid #b8cfe8;border-radius:8px;padding:12px 18px;margin-bottom:16px;color:#1a3a5c;font-size:14px;">
                             ✓ No red flags identified
                         </div>
                         """, unsafe_allow_html=True)
