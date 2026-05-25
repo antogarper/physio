@@ -90,20 +90,14 @@ with col_s4:
 
 st.divider()
 
-# ── LANGUAGE + BUTTON ROW ─────────────────────────────────
-col_lang, col_btn = st.columns([3, 1])
-
-with col_lang:
-    st.subheader("⑤ Response Language")
-    language = st.radio(
-        "Select the language for the AI assessment report:",
-        options=["English", "Spanish", "Finnish"],
-        horizontal=True
-    )
-
-with col_btn:
-    st.subheader(" ")  # spacer to align with language section
-    run = st.button("🔍 Run AI Assessment", type="primary")
+# ── LANGUAGE + BUTTON ─────────────────────────────────────
+st.subheader("⑤ Response Language")
+language = st.radio(
+    "Select the language for the AI assessment report:",
+    options=["English", "Spanish", "Finnish"],
+    horizontal=True
+)
+run = st.button("🔍 Run AI Assessment", type="primary")
 
 # ── AI CALL ───────────────────────────────────────────────
 if run:
