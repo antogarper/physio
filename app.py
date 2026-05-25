@@ -35,9 +35,8 @@ with col_s1:
 
 with col_s2:
     st.subheader("② Main Complaint")
-    main_complaint = st.text_area("Describe the patient's main problem *", key="main_complaint",
-        placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
-        height=120)
+    main_complaint = st.text_input("Describe the patient's main problem *", key="main_complaint",
+        placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...")
     body_area = st.text_input("Body Area Affected *", key="body_area",
         placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
     problem_duration = st.text_input("How long has this problem existed?", key="problem_duration",
@@ -66,18 +65,15 @@ with col_s3:
 
 with col_s4:
     st.subheader("④ Clinical History")
-    previous_history = st.text_area("Previous injuries, surgeries or medical conditions",
+    previous_history = st.text_input("Previous injuries, surgeries or medical conditions",
         key="previous_history",
-        placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...",
-        height=100)
-    current_treatments = st.text_area("Current treatments or medications",
+        placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...")
+    current_treatments = st.text_input("Current treatments or medications",
         key="current_treatments",
-        placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...",
-        height=80)
-    additional_info = st.text_area("Any other relevant information",
+        placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...")
+    additional_info = st.text_input("Any other relevant information",
         key="additional_info",
-        placeholder="e.g. Patient goals, sport they want to return to...",
-        height=80)
+        placeholder="e.g. Patient goals, sport they want to return to...")
 
 st.divider()
 
