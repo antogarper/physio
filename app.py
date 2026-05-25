@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import requests
 import json
 
@@ -13,145 +12,6 @@ st.set_page_config(
 st.title("🏥 PhysioAI — Clinical Assessment Tool")
 st.caption("AI-assisted physiotherapy screening powered by Databricks GPT")
 st.divider()
-
-# ── VOICE WIDGET HELPER ───────────────────────────────────
-def voice_widget(field_label, session_key, placeholder="", multiline=False):
-    """
-    Renders a voice-enabled field:
-    - A small HTML component with mic button + transcript display
-    - A native Streamlit input below it that the user can also type into
-    - A Sync button to copy the voice transcript into the Streamlit field
-    """
-    uid = session_key
-
-    # Initialize session state
-    if session_key not in st.session_state:
-        st.session_state[session_key] = ""
-
-    tag_height = 160 if multiline else 120
-
-    html = f"""
-    <style>
-      body {{ margin:0; font-family: sans-serif; }}
-      .wrap {{ display:flex; flex-direction:column; gap:4px; }}
-      label {{ font-size:13px; font-weight:600; color:#31333f; }}
-      .row {{ display:flex; gap:6px; align-items:flex-start; }}
-      {"textarea" if multiline else "input"} {{
-          flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;
-          font-size:13px; {"height:70px; resize:none;" if multiline else "height:36px;"}
-          font-family:sans-serif;
-      }}
-      .mic {{ padding:6px 10px; background:#f0f2f6; border:1px solid #ccc;
-               border-radius:6px; cursor:pointer; font-size:16px; white-space:nowrap; }}
-      .mic.on {{ background:#ffe0e0; }}
-      .status {{ font-size:11px; color:#888; min-height:14px; }}
-      .sync {{ padding:5px 12px; background:#1f77b4; color:white; border:none;
-               border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; }}
-      .sync:hover {{ background:#1560a0; }}
-      .note {{ font-size:10px; color:#aaa; font-style:italic; }}
-    </style>
-
-    <div class="wrap">
-      <div class="row">
-        {"<textarea" if multiline else "<input type='text'"} id="transcript" placeholder="🎤 Speak or type here, then click Sync ↓" {">" if multiline else ">"}
-        {"</textarea>" if multiline else ""}
-        <button class="mic" id="micbtn" onclick="toggleMic()">🎤</button>
-      </div>
-      <div class="status" id="status"></div>
-      <div class="row" style="align-items:center; gap:8px;">
-        <button class="sync" onclick="syncValue()">⬇ Sync to field below</button>
-        <span class="note">Click after speaking to transfer text</span>
-      </div>
-    </div>
-
-    <script>
-    var rec = null;
-    var existing = '';
-
-    function toggleMic() {{
-      if (rec) {{ rec.stop(); return; }}
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {{
-        document.getElementById('status').innerText = '⚠️ Use Chrome or Edge browser';
-        return;
-      }}
-      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      rec = new SR();
-      rec.lang = navigator.language || 'en-US';
-      rec.continuous = true;
-      rec.interimResults = true;
-
-      var btn = document.getElementById('micbtn');
-      var status = document.getElementById('status');
-      var field = document.getElementById('transcript');
-      existing = field.value;
-
-      btn.innerText = '⏹ Stop';
-      btn.classList.add('on');
-      status.innerText = '🔴 Listening... click Stop when done';
-
-      rec.onresult = function(e) {{
-        var interim = '', final = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {{
-          if (e.results[i].isFinal) final += e.results[i][0].transcript;
-          else interim += e.results[i][0].transcript;
-        }}
-        var sep = (existing && !existing.endsWith(' ')) ? ' ' : '';
-        field.value = existing + sep + final;
-        if (final) existing = field.value;
-        status.innerText = interim ? '💬 ' + interim : '🔴 Listening...';
-      }};
-
-      rec.onend = function() {{
-        rec = null;
-        btn.innerText = '🎤';
-        btn.classList.remove('on');
-        status.innerText = '✅ Done — click "Sync to field below"';
-      }};
-
-      rec.onerror = function(e) {{
-        rec = null;
-        btn.innerText = '🎤';
-        btn.classList.remove('on');
-        status.innerText = '⚠️ Error: ' + e.error;
-      }};
-
-      rec.start();
-    }}
-
-    function syncValue() {{
-      var text = document.getElementById('transcript').value;
-      // Send to Streamlit via component value
-      window.parent.postMessage({{
-        isStreamlitMessage: true,
-        type: 'streamlit:setComponentValue',
-        value: text
-      }}, '*');
-    }}
-    </script>
-    """
-
-    # Render voice widget and capture synced value
-    synced = components.html(html, height=tag_height)
-
-    # Native Streamlit field — user can also type directly here
-    if multiline:
-        val = st.text_area(
-            field_label,
-            key=session_key,
-            placeholder=placeholder,
-            height=80,
-            help="Type here or use the voice widget above, then click 'Sync to field below'"
-        )
-    else:
-        val = st.text_input(
-            field_label,
-            key=session_key,
-            placeholder=placeholder,
-            help="Type here or use the voice widget above, then click 'Sync to field below'"
-        )
-
-    return val
-
 
 # ── ROW 1: SECTIONS 1 AND 2 ──────────────────────────────
 col_s1, col_s2 = st.columns(2)
@@ -168,19 +28,19 @@ with col_s1:
         weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
     with c4:
         height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
-    occupation = voice_widget("Occupation", "occupation",
+    occupation = st.text_input("Occupation",
         placeholder="e.g. Office worker, nurse, construction worker...")
-    physical_activity = voice_widget("Physical Activity Level", "physical_activity",
+    physical_activity = st.text_input("Physical Activity Level",
         placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
 
 with col_s2:
     st.subheader("② Main Complaint")
-    main_complaint = voice_widget("Describe the patient's main problem *", "main_complaint",
-        placeholder="e.g. Difficulty walking after knee surgery, loss of balance...",
-        multiline=True)
-    body_area = voice_widget("Body Area Affected *", "body_area",
-        placeholder="e.g. Left knee, lower back, right shoulder...")
-    problem_duration = voice_widget("How long has this problem existed?", "problem_duration",
+    main_complaint = st.text_area("Describe the patient's main problem *",
+        placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
+        height=120)
+    body_area = st.text_input("Body Area Affected *",
+        placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
+    problem_duration = st.text_input("How long has this problem existed?",
         placeholder="e.g. 2 weeks, 6 months, since birth...")
     problem_onset = st.selectbox("How did the problem start?", [
         "Sudden (accident / injury)", "Gradual (developed over time)",
@@ -199,25 +59,22 @@ with col_s3:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-    aggravating = voice_widget("What makes it worse?", "aggravating",
+    aggravating = st.text_input("What makes it worse?",
         placeholder="e.g. Walking, sitting too long, lifting, certain movements...")
-    relieving = voice_widget("What makes it better?", "relieving",
+    relieving = st.text_input("What makes it better?",
         placeholder="e.g. Rest, heat, ice, specific positions...")
 
 with col_s4:
     st.subheader("④ Clinical History")
-    previous_history = voice_widget("Previous injuries, surgeries or medical conditions",
-        "previous_history",
+    previous_history = st.text_area("Previous injuries, surgeries or medical conditions",
         placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...",
-        multiline=True)
-    current_treatments = voice_widget("Current treatments or medications",
-        "current_treatments",
+        height=100)
+    current_treatments = st.text_area("Current treatments or medications",
         placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...",
-        multiline=True)
-    additional_info = voice_widget("Any other relevant information",
-        "additional_info",
+        height=80)
+    additional_info = st.text_area("Any other relevant information",
         placeholder="e.g. Patient goals, sport they want to return to...",
-        multiline=True)
+        height=80)
 
 st.divider()
 
@@ -271,21 +128,9 @@ Return this exact JSON structure (all text in {language}):
   ],
   "red_flags": ["flag 1", "flag 2"],
   "treatment": {{
-    "acute": {{
-      "phase": "Acute Phase (Week 1-2)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }},
-    "recovery": {{
-      "phase": "Recovery Phase (Week 3-6)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }},
-    "functional": {{
-      "phase": "Functional Phase (Week 7+)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }}
+    "acute":      {{"phase": "Acute Phase (Week 1-2)",    "goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}},
+    "recovery":   {{"phase": "Recovery Phase (Week 3-6)", "goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}},
+    "functional": {{"phase": "Functional Phase (Week 7+)","goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}}
   }},
   "home_exercises": [
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
@@ -293,10 +138,7 @@ Return this exact JSON structure (all text in {language}):
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}}
   ],
-  "referral": {{
-    "needed": "Yes / No",
-    "reason": "Explanation or null"
-  }},
+  "referral": {{"needed": "Yes / No", "reason": "Explanation or null"}},
   "follow_up": "Recommended follow-up timeframe"
 }}"""
 
@@ -305,9 +147,15 @@ Return this exact JSON structure (all text in {language}):
                 token = st.secrets["DATABRICKS_TOKEN"]
                 response = requests.post(
                     url="https://dbc-c0c5e61a-9d9c.cloud.databricks.com/ai-gateway/mlflow/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                    json={"model": "databricks-gpt-oss-120b", "max_tokens": 3000,
-                          "messages": [{"role": "user", "content": prompt}]}
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "databricks-gpt-oss-120b",
+                        "max_tokens": 3000,
+                        "messages": [{"role": "user", "content": prompt}]
+                    }
                 )
                 result = response.json()
 
@@ -321,9 +169,11 @@ Return this exact JSON structure (all text in {language}):
                     clean = raw.replace("```json", "").replace("```", "").strip()
                     data = json.loads(clean)
 
+                    # ── RESULTS ───────────────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
 
+                    # Primary diagnosis
                     confidence_color = {"High": "green", "Medium": "orange", "Low": "red"}.get(
                         data.get("confidence", ""), "green")
                     st.markdown(f"""
@@ -338,16 +188,19 @@ Return this exact JSON structure (all text in {language}):
                     </div>
                     """, unsafe_allow_html=True)
 
+                    # Red flags
                     red_flags = data.get("red_flags", [])
                     if red_flags:
                         st.error("🚨 **Red Flags Identified:**")
-                        for flag in red_flags: st.markdown(f"- ⚠️ {flag}")
+                        for flag in red_flags:
+                            st.markdown(f"- ⚠️ {flag}")
                     else:
                         st.success("✅ No red flags identified")
 
                     st.markdown("---")
                     col_diag, col_ref = st.columns(2)
 
+                    # Differentials
                     with col_diag:
                         st.markdown("### 🔄 Differential Diagnoses")
                         for i, diff in enumerate(data.get("differential_diagnoses", []), 1):
@@ -359,6 +212,7 @@ Return this exact JSON structure (all text in {language}):
                             </div>
                             """, unsafe_allow_html=True)
 
+                    # Referral
                     with col_ref:
                         st.markdown("### 📅 Referral & Follow-up")
                         referral = data.get("referral", {})
@@ -368,6 +222,7 @@ Return this exact JSON structure (all text in {language}):
                             st.success("**No referral needed**")
                         st.info(f"**Follow-up:** {data.get('follow_up', '')}")
 
+                    # Treatment plan
                     st.markdown("---")
                     st.markdown("### 💊 Treatment Plan")
                     treatment = data.get("treatment", {})
@@ -377,8 +232,10 @@ Return this exact JSON structure (all text in {language}):
                             phase = treatment.get(phase_key, {})
                             st.markdown(f"**Goals:** {phase.get('goals', '')}")
                             st.markdown("**Interventions:**")
-                            for item in phase.get("interventions", []): st.markdown(f"- {item}")
+                            for item in phase.get("interventions", []):
+                                st.markdown(f"- {item}")
 
+                    # Home exercises
                     st.markdown("---")
                     st.markdown("### 🏃 Home Exercise Program")
                     exercises = data.get("home_exercises", [])
