@@ -30,90 +30,6 @@ def section(title):
                 text-transform:uppercase;margin-bottom:12px;">{title}</div>
     """, unsafe_allow_html=True)
 
-# ── MIC COMPONENT ─────────────────────────────────────────
-def mic_input(label, key, placeholder=""):
-    """
-    Renders a Streamlit text_input with a mic button beside it.
-    Uses a separate mic_key to avoid widget state conflict.
-    """
-    mic_key = f"_mic_{key}"
-
-    # If mic captured something new, pre-populate the field
-    if mic_key in st.session_state and st.session_state[mic_key]:
-        default = st.session_state[mic_key]
-        st.session_state[mic_key] = ""  # clear after use
-    elif key in st.session_state:
-        default = st.session_state[key]
-    else:
-        default = ""
-
-    col_field, col_mic = st.columns([10, 1])
-
-    with col_field:
-        val = st.text_input(label, key=key, placeholder=placeholder, value=default)
-
-    with col_mic:
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-        mic_html = f"""
-        <style>
-        body{{margin:0;padding:0;background:transparent;}}
-        button{{
-            width:38px;height:38px;background:#eaf1fb;border:1px solid #b8cfe8;
-            border-radius:6px;cursor:pointer;font-size:16px;display:flex;
-            align-items:center;justify-content:center;
-        }}
-        button.on{{background:#dce8f5;border-color:#1a3a5c;}}
-        </style>
-        <button id="b" onclick="go()" title="Click to speak">🎤</button>
-        <script>
-        var rec=null, existing='';
-        function go(){{
-            if(rec){{rec.stop();return;}}
-            if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){{
-                alert('Use Chrome or Edge for voice input');return;
-            }}
-            var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-            rec=new SR();
-            rec.lang=navigator.language||'en-US';
-            rec.continuous=true;
-            rec.interimResults=true;
-            var btn=document.getElementById('b');
-            btn.innerText='⏹';btn.classList.add('on');
-            rec.onresult=function(e){{
-                var interim='',final='';
-                for(var i=e.resultIndex;i<e.results.length;i++){{
-                    if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-                    else interim+=e.results[i][0].transcript;
-                }}
-                if(final){{
-                    existing=existing+(existing&&!existing.endsWith(' ')?' ':'')+final;
-                    window.parent.postMessage({{
-                        isStreamlitMessage:true,
-                        type:'streamlit:setComponentValue',
-                        value: existing
-                    }},'*');
-                }}
-            }};
-            rec.onend=function(){{
-                rec=null;btn.innerText='🎤';btn.classList.remove('on');
-            }};
-            rec.onerror=function(){{
-                rec=null;btn.innerText='🎤';btn.classList.remove('on');
-            }};
-            rec.start();
-        }}
-        </script>
-        """
-        spoken = components.html(mic_html, height=42)
-
-        # If mic returned a new value, store in mic_key and rerun
-        if spoken and spoken != st.session_state.get(key, ""):
-            st.session_state[mic_key] = spoken
-            st.rerun()
-
-    return st.session_state.get(key, "")
-
-
 # ── BANNER ────────────────────────────────────────────────
 st.markdown("""
 <div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4);padding:24px 28px;
@@ -140,14 +56,14 @@ with col_s1:
         weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
     with c4:
         height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
-    occupation        = mic_input("Occupation", "occupation", "e.g. Office worker, nurse...")
-    physical_activity = mic_input("Physical Activity Level", "physical_activity", "e.g. Sedentary, walks daily...")
+    occupation        = st.text_input("Occupation", key="occupation", placeholder="e.g. Office worker, nurse...")
+    physical_activity = st.text_input("Physical Activity Level", key="physical_activity", placeholder="e.g. Sedentary, walks daily...")
 
 with col_s2:
     section("② Main Complaint")
-    main_complaint   = mic_input("Describe the patient's main problem *", "main_complaint", "e.g. Difficulty walking after knee surgery...")
-    body_area        = mic_input("Body Area Affected *", "body_area", "e.g. Left knee, lower back, right shoulder...")
-    problem_duration = mic_input("How long has this problem existed?", "problem_duration", "e.g. 2 weeks, 6 months...")
+    main_complaint   = st.text_input("Describe the patient's main problem *", key="main_complaint", placeholder="e.g. Difficulty walking after knee surgery...")
+    body_area        = st.text_input("Body Area Affected *", key="body_area", placeholder="e.g. Left knee, lower back, right shoulder...")
+    problem_duration = st.text_input("How long has this problem existed?", key="problem_duration", placeholder="e.g. 2 weeks, 6 months...")
     problem_onset    = st.selectbox("How did the problem start?", [
         "Sudden (accident / injury)", "Gradual (developed over time)",
         "After surgery", "After illness", "Unknown / no clear cause"
@@ -165,20 +81,149 @@ with col_s3:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-    aggravating = mic_input("What makes it worse?", "aggravating", "e.g. Walking, sitting too long...")
-    relieving   = mic_input("What makes it better?", "relieving", "e.g. Rest, heat, ice...")
+    aggravating = st.text_input("What makes it worse?", key="aggravating", placeholder="e.g. Walking, sitting too long...")
+    relieving   = st.text_input("What makes it better?", key="relieving", placeholder="e.g. Rest, heat, ice...")
 
 with col_s4:
     section("④ Clinical History")
-    previous_history   = mic_input("Previous injuries, surgeries or medical conditions", "previous_history", "e.g. Knee surgery 2022, diabetes...")
-    current_treatments = mic_input("Current treatments or medications", "current_treatments", "e.g. Taking ibuprofen, wearing a brace...")
-    additional_info    = mic_input("Any other relevant information", "additional_info", "e.g. Patient goals, sport they want to return to...")
+    previous_history   = st.text_input("Previous injuries, surgeries or medical conditions", key="previous_history", placeholder="e.g. Knee surgery 2022, diabetes...")
+    current_treatments = st.text_input("Current treatments or medications", key="current_treatments", placeholder="e.g. Taking ibuprofen, wearing a brace...")
+    additional_info    = st.text_input("Any other relevant information", key="additional_info", placeholder="e.g. Patient goals, sport they want to return to...")
 
 st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
 
 # ── LANGUAGE ──────────────────────────────────────────────
 section("⑤ Response Language")
 language = st.radio("", options=["English", "Spanish", "Finnish"], horizontal=True)
+
+# ── MIC PANEL ─────────────────────────────────────────────
+# Single mic panel below the form — user speaks, text shown,
+# then they paste into the field they want
+st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
+section("🎤 Voice Input")
+st.caption("Select the field you want to fill, click the microphone, speak, then copy the text into the field above.")
+
+MIC_HTML = """
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+body { margin: 0; background: #f4f7fb; }
+.wrap { display: flex; gap: 10px; align-items: flex-start; padding: 4px 0; }
+select {
+    padding: 8px 10px; border: 1px solid #b8cfe8; border-radius: 6px;
+    font-size: 13px; color: #1a3a5c; background: white;
+    outline: none; flex: 1;
+}
+.mic-btn {
+    padding: 8px 16px; background: #1a3a5c; color: white;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.mic-btn.on { background: #2e6da4; }
+.result-box {
+    margin-top: 10px; padding: 10px 12px;
+    border: 1px solid #b8cfe8; border-radius: 6px;
+    background: white; font-size: 13px; color: #1a3a5c;
+    min-height: 38px; line-height: 1.5;
+}
+.copy-btn {
+    margin-top: 8px; padding: 7px 16px; background: #eaf1fb;
+    border: 1px solid #b8cfe8; border-radius: 6px; cursor: pointer;
+    font-size: 13px; color: #1a3a5c; font-weight: 600;
+}
+.copy-btn:hover { background: #dce8f5; }
+.status { font-size: 11px; color: #2e6da4; margin-top: 4px; min-height: 14px; }
+</style>
+
+<div class="wrap">
+    <select id="field_select">
+        <option value="occupation">Occupation</option>
+        <option value="physical_activity">Physical Activity Level</option>
+        <option value="main_complaint">Main Complaint</option>
+        <option value="body_area">Body Area Affected</option>
+        <option value="problem_duration">Problem Duration</option>
+        <option value="aggravating">What makes it worse</option>
+        <option value="relieving">What makes it better</option>
+        <option value="previous_history">Previous History</option>
+        <option value="current_treatments">Current Treatments</option>
+        <option value="additional_info">Additional Info</option>
+    </select>
+    <button class="mic-btn" id="mic_btn" onclick="toggleMic()">🎤 Start Speaking</button>
+</div>
+<div class="status" id="status"></div>
+<div class="result-box" id="result_box">Your spoken text will appear here...</div>
+<button class="copy-btn" onclick="copyText()">📋 Copy text</button>
+
+<script>
+var rec = null;
+var transcript = '';
+
+function toggleMic() {
+    if (rec) { rec.stop(); return; }
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('status').innerText = '⚠️ Use Chrome or Edge browser';
+        return;
+    }
+
+    transcript = '';
+    var SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
+    rec = new SR();
+    rec.lang = navigator.language || 'en-US';
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    var btn    = document.getElementById('mic_btn');
+    var status = document.getElementById('status');
+    var box    = document.getElementById('result_box');
+
+    btn.innerText = '⏹ Stop';
+    btn.classList.add('on');
+    status.innerText = '🔴 Listening... click Stop when done';
+    box.innerText = '';
+
+    rec.onresult = function(e) {
+        var interim = '', final = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) final += e.results[i][0].transcript;
+            else interim += e.results[i][0].transcript;
+        }
+        if (final) transcript += (transcript ? ' ' : '') + final;
+        box.innerText = transcript + (interim ? ' ' + interim : '');
+        status.innerText = interim ? '💬 ' + interim : '🔴 Listening...';
+    };
+
+    rec.onend = function() {
+        rec = null;
+        btn.innerText = '🎤 Start Speaking';
+        btn.classList.remove('on');
+        box.innerText = transcript || 'Nothing captured. Try again.';
+        status.innerText = transcript ? '✅ Done — copy the text above into the field' : '';
+    };
+
+    rec.onerror = function(e) {
+        rec = null;
+        btn.innerText = '🎤 Start Speaking';
+        btn.classList.remove('on');
+        status.innerText = '⚠️ Error: ' + e.error;
+    };
+
+    rec.start();
+}
+
+function copyText() {
+    var text = document.getElementById('result_box').innerText;
+    if (!text || text === 'Your spoken text will appear here...') return;
+    navigator.clipboard.writeText(text).then(function() {
+        document.getElementById('status').innerText = '✅ Copied! Now paste it into the field above (Ctrl+V)';
+        setTimeout(function() {
+            document.getElementById('status').innerText = '';
+        }, 3000);
+    });
+}
+</script>
+"""
+
+components.html(MIC_HTML, height=200, scrolling=False)
 
 st.markdown("<div style='margin:8px 0'></div>", unsafe_allow_html=True)
 
