@@ -230,23 +230,32 @@ function sendToStreamlit(data) {
 }
 
 // Tell Streamlit we are ready and set initial height
-window.addEventListener("load", function() {
+function sendReady() {
     window.parent.postMessage({
         isStreamlitMessage: true,
         type: "streamlit:componentReady",
         apiVersion: 1
     }, "*");
-    updateHeight();
-});
+}
 
 function updateHeight() {
-    var h = document.body.scrollHeight;
+    var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 900);
     window.parent.postMessage({
         isStreamlitMessage: true,
         type: "streamlit:setFrameHeight",
         height: h
     }, "*");
 }
+
+// Fire multiple times to ensure height is set
+sendReady();
+updateHeight();
+window.addEventListener("load", function() {
+    sendReady();
+    updateHeight();
+    setTimeout(updateHeight, 300);
+    setTimeout(updateHeight, 800);
+});
 
 // ── Pain toggle ───────────────────────────────────────────
 function togglePain() {
