@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import json
 
@@ -9,149 +10,148 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── INJECT VOICE RECOGNITION SCRIPT ──────────────────────
-# This script listens for mic button clicks anywhere on the page
-# and fills the nearest Streamlit input/textarea via DOM manipulation
-st.markdown("""
-<style>
-input[type=text], textarea { autocomplete: off !important; }
-.mic-btn {
-    background: #f0f2f6; border: 1px solid #ccc; border-radius: 6px;
-    cursor: pointer; font-size: 16px; padding: 2px 8px;
-    margin-left: 4px; vertical-align: middle;
-}
-.mic-btn.recording { background: #ffe0e0 !important; }
-</style>
-
-<script>
-var activeRec = null;
-
-function fillStreamlitField(fieldKey, text) {
-    // Find the Streamlit input by its aria-label or data-testid
-    var inputs = window.parent.document.querySelectorAll(
-        'input[type="text"], textarea'
-    );
-    for (var i = 0; i < inputs.length; i++) {
-        var el = inputs[i];
-        // Match by placeholder or label text
-        if (el.getAttribute('data-field-key') === fieldKey ||
-            el.placeholder && el.placeholder.includes(fieldKey)) {
-            var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.parent.HTMLInputElement.prototype, 'value'
-            ) || Object.getOwnPropertyDescriptor(
-                window.parent.HTMLTextAreaElement.prototype, 'value'
-            );
-            nativeInputValueSetter.set.call(el, text);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            break;
-        }
-    }
-}
-
-function startMic(targetId, statusId, btnId) {
-    if (activeRec) { activeRec.stop(); return; }
-
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        document.getElementById(statusId).innerText = '⚠️ Use Chrome or Edge';
-        return;
-    }
-
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var rec = new SR();
-    rec.lang = navigator.language || 'en-US';
-    rec.continuous = true;
-    rec.interimResults = true;
-    activeRec = rec;
-
-    var btn = document.getElementById(btnId);
-    var status = document.getElementById(statusId);
-    var target = document.getElementById(targetId);
-    var existing = target ? target.value : '';
-
-    if (btn) { btn.innerText = '⏹'; btn.classList.add('recording'); }
-    if (status) status.innerText = '🔴 Listening... click ⏹ to stop';
-
-    rec.onresult = function(e) {
-        var interim = '', final = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) final += e.results[i][0].transcript;
-            else interim += e.results[i][0].transcript;
-        }
-        if (target) {
-            var sep = (existing && !existing.endsWith(' ')) ? ' ' : '';
-            target.value = existing + sep + final;
-            if (final) existing = target.value;
-        }
-        if (status) status.innerText = interim ? '💬 ' + interim : '🔴 Listening...';
-    };
-
-    rec.onend = function() {
-        activeRec = null;
-        if (btn) { btn.innerText = '🎤'; btn.classList.remove('recording'); }
-        if (status) { status.innerText = '✅ Done'; setTimeout(function(){ status.innerText=''; }, 2000); }
-    };
-
-    rec.onerror = function(e) {
-        activeRec = null;
-        if (btn) { btn.innerText = '🎤'; btn.classList.remove('recording'); }
-        if (status) status.innerText = '⚠️ ' + e.error;
-    };
-
-    rec.start();
-}
-</script>
-""", unsafe_allow_html=True)
-
-
-# ── MIC FIELD HELPER ─────────────────────────────────────
-def mic_field(label, key, placeholder="", multiline=False, height=80):
-    """Renders a labeled field with a 🎤 mic button using inline HTML + st input."""
-    uid = key.replace("_", "")
-
-    # The mic button + status sits above the Streamlit field
-    st.markdown(f"""
-        <div style="display:flex; align-items:center; margin-bottom:2px;">
-            <span style="font-size:14px; font-weight:600; color:#31333f; flex:1">{label}</span>
-            <button class="mic-btn" id="btn_{uid}"
-                onclick="startMic('input_{uid}', 'status_{uid}', 'btn_{uid}')"
-                title="Click to speak">🎤</button>
-        </div>
-        <div id="status_{uid}" style="font-size:11px; color:#888; height:14px; margin-bottom:2px;"></div>
-        <div id="wrapper_{uid}">
-    """, unsafe_allow_html=True)
-
-    if multiline:
-        val = st.text_area(
-            label, key=key, placeholder=placeholder,
-            height=height, label_visibility="collapsed"
-        )
-    else:
-        val = st.text_input(
-            label, key=key, placeholder=placeholder,
-            label_visibility="collapsed"
-        )
-
-    # Inject id onto the rendered input so the JS can find it
-    st.markdown(f"""
-        </div>
-        <script>
-        (function() {{
-            var wrapper = document.getElementById('wrapper_{uid}');
-            if (wrapper) {{
-                var el = wrapper.querySelector('input, textarea');
-                if (el) el.id = 'input_{uid}';
-            }}
-        }})();
-        </script>
-    """, unsafe_allow_html=True)
-
-    return val
-
-
-# ── TITLE ─────────────────────────────────────────────────
 st.title("🏥 PhysioAI — Clinical Assessment Tool")
 st.caption("AI-assisted physiotherapy screening powered by Databricks GPT")
 st.divider()
+
+# ── VOICE WIDGET HELPER ───────────────────────────────────
+def voice_widget(field_label, session_key, placeholder="", multiline=False):
+    """
+    Renders a voice-enabled field:
+    - A small HTML component with mic button + transcript display
+    - A native Streamlit input below it that the user can also type into
+    - A Sync button to copy the voice transcript into the Streamlit field
+    """
+    uid = session_key
+
+    # Initialize session state
+    if session_key not in st.session_state:
+        st.session_state[session_key] = ""
+
+    tag_height = 160 if multiline else 120
+
+    html = f"""
+    <style>
+      body {{ margin:0; font-family: sans-serif; }}
+      .wrap {{ display:flex; flex-direction:column; gap:4px; }}
+      label {{ font-size:13px; font-weight:600; color:#31333f; }}
+      .row {{ display:flex; gap:6px; align-items:flex-start; }}
+      {"textarea" if multiline else "input"} {{
+          flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;
+          font-size:13px; {"height:70px; resize:none;" if multiline else "height:36px;"}
+          font-family:sans-serif;
+      }}
+      .mic {{ padding:6px 10px; background:#f0f2f6; border:1px solid #ccc;
+               border-radius:6px; cursor:pointer; font-size:16px; white-space:nowrap; }}
+      .mic.on {{ background:#ffe0e0; }}
+      .status {{ font-size:11px; color:#888; min-height:14px; }}
+      .sync {{ padding:5px 12px; background:#1f77b4; color:white; border:none;
+               border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; }}
+      .sync:hover {{ background:#1560a0; }}
+      .note {{ font-size:10px; color:#aaa; font-style:italic; }}
+    </style>
+
+    <div class="wrap">
+      <div class="row">
+        {"<textarea" if multiline else "<input type='text'"} id="transcript" placeholder="🎤 Speak or type here, then click Sync ↓" {">" if multiline else ">"}
+        {"</textarea>" if multiline else ""}
+        <button class="mic" id="micbtn" onclick="toggleMic()">🎤</button>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="row" style="align-items:center; gap:8px;">
+        <button class="sync" onclick="syncValue()">⬇ Sync to field below</button>
+        <span class="note">Click after speaking to transfer text</span>
+      </div>
+    </div>
+
+    <script>
+    var rec = null;
+    var existing = '';
+
+    function toggleMic() {{
+      if (rec) {{ rec.stop(); return; }}
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {{
+        document.getElementById('status').innerText = '⚠️ Use Chrome or Edge browser';
+        return;
+      }}
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      rec = new SR();
+      rec.lang = navigator.language || 'en-US';
+      rec.continuous = true;
+      rec.interimResults = true;
+
+      var btn = document.getElementById('micbtn');
+      var status = document.getElementById('status');
+      var field = document.getElementById('transcript');
+      existing = field.value;
+
+      btn.innerText = '⏹ Stop';
+      btn.classList.add('on');
+      status.innerText = '🔴 Listening... click Stop when done';
+
+      rec.onresult = function(e) {{
+        var interim = '', final = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {{
+          if (e.results[i].isFinal) final += e.results[i][0].transcript;
+          else interim += e.results[i][0].transcript;
+        }}
+        var sep = (existing && !existing.endsWith(' ')) ? ' ' : '';
+        field.value = existing + sep + final;
+        if (final) existing = field.value;
+        status.innerText = interim ? '💬 ' + interim : '🔴 Listening...';
+      }};
+
+      rec.onend = function() {{
+        rec = null;
+        btn.innerText = '🎤';
+        btn.classList.remove('on');
+        status.innerText = '✅ Done — click "Sync to field below"';
+      }};
+
+      rec.onerror = function(e) {{
+        rec = null;
+        btn.innerText = '🎤';
+        btn.classList.remove('on');
+        status.innerText = '⚠️ Error: ' + e.error;
+      }};
+
+      rec.start();
+    }}
+
+    function syncValue() {{
+      var text = document.getElementById('transcript').value;
+      // Send to Streamlit via component value
+      window.parent.postMessage({{
+        isStreamlitMessage: true,
+        type: 'streamlit:setComponentValue',
+        value: text
+      }}, '*');
+    }}
+    </script>
+    """
+
+    # Render voice widget and capture synced value
+    synced = components.html(html, height=tag_height)
+
+    # Native Streamlit field — user can also type directly here
+    if multiline:
+        val = st.text_area(
+            field_label,
+            key=session_key,
+            placeholder=placeholder,
+            height=80,
+            help="Type here or use the voice widget above, then click 'Sync to field below'"
+        )
+    else:
+        val = st.text_input(
+            field_label,
+            key=session_key,
+            placeholder=placeholder,
+            help="Type here or use the voice widget above, then click 'Sync to field below'"
+        )
+
+    return val
+
 
 # ── ROW 1: SECTIONS 1 AND 2 ──────────────────────────────
 col_s1, col_s2 = st.columns(2)
@@ -168,20 +168,19 @@ with col_s1:
         weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
     with c4:
         height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
-
-    occupation = mic_field("Occupation", "occupation",
+    occupation = voice_widget("Occupation", "occupation",
         placeholder="e.g. Office worker, nurse, construction worker...")
-    physical_activity = mic_field("Physical Activity Level", "physical_activity",
+    physical_activity = voice_widget("Physical Activity Level", "physical_activity",
         placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
 
 with col_s2:
     st.subheader("② Main Complaint")
-    main_complaint = mic_field("Describe the patient's main problem *", "main_complaint",
-        placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
-        multiline=True, height=120)
-    body_area = mic_field("Body Area Affected *", "body_area",
-        placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
-    problem_duration = mic_field("How long has this problem existed?", "problem_duration",
+    main_complaint = voice_widget("Describe the patient's main problem *", "main_complaint",
+        placeholder="e.g. Difficulty walking after knee surgery, loss of balance...",
+        multiline=True)
+    body_area = voice_widget("Body Area Affected *", "body_area",
+        placeholder="e.g. Left knee, lower back, right shoulder...")
+    problem_duration = voice_widget("How long has this problem existed?", "problem_duration",
         placeholder="e.g. 2 weeks, 6 months, since birth...")
     problem_onset = st.selectbox("How did the problem start?", [
         "Sudden (accident / injury)", "Gradual (developed over time)",
@@ -200,26 +199,25 @@ with col_s3:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-
-    aggravating = mic_field("What makes it worse?", "aggravating",
+    aggravating = voice_widget("What makes it worse?", "aggravating",
         placeholder="e.g. Walking, sitting too long, lifting, certain movements...")
-    relieving = mic_field("What makes it better?", "relieving",
+    relieving = voice_widget("What makes it better?", "relieving",
         placeholder="e.g. Rest, heat, ice, specific positions...")
 
 with col_s4:
     st.subheader("④ Clinical History")
-    previous_history = mic_field("Previous injuries, surgeries or medical conditions",
+    previous_history = voice_widget("Previous injuries, surgeries or medical conditions",
         "previous_history",
         placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...",
-        multiline=True, height=100)
-    current_treatments = mic_field("Current treatments or medications",
+        multiline=True)
+    current_treatments = voice_widget("Current treatments or medications",
         "current_treatments",
-        placeholder="e.g. Taking ibuprofen, wearing a brace, doing home exercises...",
-        multiline=True, height=80)
-    additional_info = mic_field("Any other relevant information",
+        placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...",
+        multiline=True)
+    additional_info = voice_widget("Any other relevant information",
         "additional_info",
         placeholder="e.g. Patient goals, sport they want to return to...",
-        multiline=True, height=80)
+        multiline=True)
 
 st.divider()
 
@@ -323,7 +321,6 @@ Return this exact JSON structure (all text in {language}):
                     clean = raw.replace("```json", "").replace("```", "").strip()
                     data = json.loads(clean)
 
-                    # ── RESULTS ───────────────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
 
@@ -344,8 +341,7 @@ Return this exact JSON structure (all text in {language}):
                     red_flags = data.get("red_flags", [])
                     if red_flags:
                         st.error("🚨 **Red Flags Identified:**")
-                        for flag in red_flags:
-                            st.markdown(f"- ⚠️ {flag}")
+                        for flag in red_flags: st.markdown(f"- ⚠️ {flag}")
                     else:
                         st.success("✅ No red flags identified")
 
@@ -381,8 +377,7 @@ Return this exact JSON structure (all text in {language}):
                             phase = treatment.get(phase_key, {})
                             st.markdown(f"**Goals:** {phase.get('goals', '')}")
                             st.markdown("**Interventions:**")
-                            for item in phase.get("interventions", []):
-                                st.markdown(f"- {item}")
+                            for item in phase.get("interventions", []): st.markdown(f"- {item}")
 
                     st.markdown("---")
                     st.markdown("### 🏃 Home Exercise Program")
@@ -407,6 +402,5 @@ Return this exact JSON structure (all text in {language}):
 
             except json.JSONDecodeError:
                 st.error("Could not parse AI response. Please try again.")
-                st.code(raw)
             except Exception as e:
                 st.error(f"Something went wrong: {str(e)}")
