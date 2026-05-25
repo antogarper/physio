@@ -34,21 +34,26 @@ def section(title):
 def mic_input(label, key, placeholder=""):
     """
     Renders a Streamlit text_input with a mic button beside it.
-    The mic button lives in a tiny iframe but only captures speech
-    and writes it back via st.session_state using component value.
+    Uses a separate mic_key to avoid widget state conflict.
     """
-    # Initialize
-    if key not in st.session_state:
-        st.session_state[key] = ""
+    mic_key = f"_mic_{key}"
+
+    # If mic captured something new, pre-populate the field
+    if mic_key in st.session_state and st.session_state[mic_key]:
+        default = st.session_state[mic_key]
+        st.session_state[mic_key] = ""  # clear after use
+    elif key in st.session_state:
+        default = st.session_state[key]
+    else:
+        default = ""
 
     col_field, col_mic = st.columns([10, 1])
 
     with col_field:
-        val = st.text_input(label, key=key, placeholder=placeholder)
+        val = st.text_input(label, key=key, placeholder=placeholder, value=default)
 
     with col_mic:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-        # Small mic-only component
         mic_html = f"""
         <style>
         body{{margin:0;padding:0;background:transparent;}}
@@ -101,9 +106,9 @@ def mic_input(label, key, placeholder=""):
         """
         spoken = components.html(mic_html, height=42)
 
-        # If mic returned a value, update session state and rerun
+        # If mic returned a new value, store in mic_key and rerun
         if spoken and spoken != st.session_state.get(key, ""):
-            st.session_state[key] = spoken
+            st.session_state[mic_key] = spoken
             st.rerun()
 
     return st.session_state.get(key, "")
