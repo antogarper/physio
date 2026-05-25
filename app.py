@@ -1,7 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import json
-from physio_form import physio_form
+import os
+
+# ── REGISTER COMPONENT ────────────────────────────────────
+_component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physio_form", "frontend")
+physio_form = components.declare_component("physio_form", path=_component_dir)
 
 st.set_page_config(page_title="PhysioAI Assessment", page_icon="🏥", layout="wide")
 
