@@ -28,19 +28,19 @@ with col_s1:
         weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
     with c4:
         height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
-    occupation = st.text_input("Occupation",
+    occupation = st.text_input("Occupation", key="occupation",
         placeholder="e.g. Office worker, nurse, construction worker...")
-    physical_activity = st.text_input("Physical Activity Level",
+    physical_activity = st.text_input("Physical Activity Level", key="physical_activity",
         placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
 
 with col_s2:
     st.subheader("② Main Complaint")
-    main_complaint = st.text_area("Describe the patient's main problem *",
+    main_complaint = st.text_area("Describe the patient's main problem *", key="main_complaint",
         placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
         height=120)
-    body_area = st.text_input("Body Area Affected *",
+    body_area = st.text_input("Body Area Affected *", key="body_area",
         placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
-    problem_duration = st.text_input("How long has this problem existed?",
+    problem_duration = st.text_input("How long has this problem existed?", key="problem_duration",
         placeholder="e.g. 2 weeks, 6 months, since birth...")
     problem_onset = st.selectbox("How did the problem start?", [
         "Sudden (accident / injury)", "Gradual (developed over time)",
@@ -59,20 +59,23 @@ with col_s3:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-    aggravating = st.text_input("What makes it worse?",
+    aggravating = st.text_input("What makes it worse?", key="aggravating",
         placeholder="e.g. Walking, sitting too long, lifting, certain movements...")
-    relieving = st.text_input("What makes it better?",
+    relieving = st.text_input("What makes it better?", key="relieving",
         placeholder="e.g. Rest, heat, ice, specific positions...")
 
 with col_s4:
     st.subheader("④ Clinical History")
     previous_history = st.text_area("Previous injuries, surgeries or medical conditions",
+        key="previous_history",
         placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...",
         height=100)
     current_treatments = st.text_area("Current treatments or medications",
+        key="current_treatments",
         placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...",
         height=80)
     additional_info = st.text_area("Any other relevant information",
+        key="additional_info",
         placeholder="e.g. Patient goals, sport they want to return to...",
         height=80)
 
@@ -89,7 +92,18 @@ run = st.button("🔍 Run AI Assessment", type="primary")
 
 # ── AI CALL ───────────────────────────────────────────────
 if run:
-    if not (main_complaint or "").strip() or not (body_area or "").strip():
+    main_complaint = st.session_state.get("main_complaint", "")
+    body_area      = st.session_state.get("body_area", "")
+    occupation     = st.session_state.get("occupation", "")
+    physical_activity = st.session_state.get("physical_activity", "")
+    problem_duration  = st.session_state.get("problem_duration", "")
+    aggravating    = st.session_state.get("aggravating", "")
+    relieving      = st.session_state.get("relieving", "")
+    previous_history  = st.session_state.get("previous_history", "")
+    current_treatments = st.session_state.get("current_treatments", "")
+    additional_info   = st.session_state.get("additional_info", "")
+
+    if not main_complaint.strip() or not body_area.strip():
         st.error("⚠️ Please fill in the Main Complaint and Body Area Affected fields.")
     else:
         prompt = f"""You are an expert physiotherapist assistant. Analyze the following patient data and return ONLY a valid JSON object, with no extra text, no markdown, no backticks.
