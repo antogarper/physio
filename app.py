@@ -89,10 +89,8 @@ div[data-testid="stSpinner"] { color: #1a3a5c !important; }
 st.markdown("""
 <div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4); padding:28px 32px;
             border-radius:12px; margin-bottom:28px;">
-    <h1 style="color:#ffffff; margin:0; font-size:26px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🏥 PhysioAI — Clinical Assessment Tool</h1>
-    <p style="color:#b8d4f0; margin:6px 0 0 0; font-size:14px;">
-        AI-assisted physiotherapy screening
-    </p>
+    <span style="display:block; color:#ffffff !important; font-size:26px; font-weight:700; text-shadow:0 1px 4px rgba(0,0,0,0.4); margin-bottom:6px;">🏥 PhysioAI — Clinical Assessment Tool</span>
+    <span style="display:block; color:#b8d4f0 !important; font-size:14px;">AI-assisted physiotherapy screening</span>
 </div>
 """, unsafe_allow_html=True)
 
