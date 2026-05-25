@@ -89,9 +89,9 @@ div[data-testid="stSpinner"] { color: #1a3a5c !important; }
 st.markdown("""
 <div style="background:linear-gradient(135deg,#1a3a5c,#2e6da4); padding:28px 32px;
             border-radius:12px; margin-bottom:28px;">
-    <h1 style="color:white; margin:0; font-size:26px;">🏥 PhysioAI — Clinical Assessment Tool</h1>
+    <h1 style="color:#ffffff; margin:0; font-size:26px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🏥 PhysioAI — Clinical Assessment Tool</h1>
     <p style="color:#b8d4f0; margin:6px 0 0 0; font-size:14px;">
-        AI-assisted physiotherapy screening powered by Databricks GPT
+        AI-assisted physiotherapy screening
     </p>
 </div>
 """, unsafe_allow_html=True)
