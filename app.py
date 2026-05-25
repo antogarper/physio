@@ -60,6 +60,16 @@ additional_symptoms = st.text_area("Additional Symptoms",
 
 st.divider()
 
+# ── LANGUAGE SELECTOR ─────────────────────────────────────
+st.subheader("④ Response Language")
+language = st.radio(
+    "Select the language for the AI assessment report:",
+    options=["English", "Spanish", "Finnish"],
+    horizontal=True
+)
+
+st.divider()
+
 # ── RUN BUTTON ────────────────────────────────────────────
 run = st.button("🔍 Run AI Assessment", type="primary", use_container_width=True)
 
@@ -95,6 +105,8 @@ Please provide:
 4. TREATMENT PLAN – broken into phases (Acute / Recovery / Functional)
 5. HOME EXERCISES – 3 to 5 specific exercises
 6. REFERRAL RECOMMENDATION – whether further imaging or specialist is needed
+
+IMPORTANT: Please write your entire response in {language}.
 """
 
         with st.spinner("🤖 Analyzing patient data... please wait"):
@@ -126,7 +138,7 @@ Please provide:
                     # ── DISPLAY RESULTS ───────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
-                    st.success("Assessment complete")
+                    st.success(f"Assessment complete — response in {language}")
                     st.markdown(answer)
                     st.divider()
                     st.warning("⚠️ AI-assisted screening only. Must be reviewed by a qualified physiotherapist.")
