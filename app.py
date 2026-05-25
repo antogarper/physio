@@ -11,25 +11,9 @@ st.set_page_config(
 
 st.title("🏥 PhysioAI — Clinical Assessment Tool")
 st.caption("AI-assisted physiotherapy screening powered by Databricks GPT")
-
-# Disable browser autocomplete on all input fields
-st.markdown("""
-    <style>
-    input[type=text], textarea { autocomplete: off !important; }
-    </style>
-    <script>
-    setTimeout(function() {
-        document.querySelectorAll('input, textarea').forEach(function(el) {
-            el.setAttribute('autocomplete', 'off');
-            el.setAttribute('autocomplete', 'new-password');
-        });
-    }, 500);
-    </script>
-""", unsafe_allow_html=True)
-
 st.divider()
 
-# ── ROW 1: SECTIONS 1 AND 2 SIDE BY SIDE ─────────────────
+# ── ROW 1: SECTIONS 1 AND 2 ──────────────────────────────
 col_s1, col_s2 = st.columns(2)
 
 with col_s1:
@@ -43,27 +27,29 @@ with col_s1:
     with c3:
         weight = st.number_input("Weight (kg)", min_value=1, max_value=300, value=68)
     with c4:
-        height = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
-    occupation = st.text_input("Occupation", placeholder="e.g. Office worker, nurse, construction worker...")
-    physical_activity = st.text_input("Physical Activity Level", placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
+        height_val = st.number_input("Height (cm)", min_value=50, max_value=250, value=165)
+    occupation = st.text_input("Occupation",
+        placeholder="e.g. Office worker, nurse, construction worker...")
+    physical_activity = st.text_input("Physical Activity Level",
+        placeholder="e.g. Sedentary, walks daily, plays football 2x/week...")
 
 with col_s2:
     st.subheader("② Main Complaint")
-    main_complaint = st.text_area(
-        "Describe the patient's main problem *",
+    main_complaint = st.text_area("Describe the patient's main problem *",
         placeholder="e.g. Difficulty walking after knee surgery, loss of balance, limited shoulder mobility...",
-        height=120
-    )
-    body_area = st.text_input("Body Area Affected *", placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
-    problem_duration = st.text_input("How long has this problem existed?", placeholder="e.g. 2 weeks, 6 months, since birth...")
-    problem_onset = st.selectbox(
-        "How did the problem start?",
-        ["Sudden (accident / injury)", "Gradual (developed over time)", "After surgery", "After illness", "Unknown / no clear cause"]
-    )
+        height=120)
+    body_area = st.text_input("Body Area Affected *",
+        placeholder="e.g. Left knee, lower back, right shoulder, both hands...")
+    problem_duration = st.text_input("How long has this problem existed?",
+        placeholder="e.g. 2 weeks, 6 months, since birth...")
+    problem_onset = st.selectbox("How did the problem start?", [
+        "Sudden (accident / injury)", "Gradual (developed over time)",
+        "After surgery", "After illness", "Unknown / no clear cause"
+    ])
 
 st.divider()
 
-# ── ROW 2: SECTIONS 3 AND 4 SIDE BY SIDE ─────────────────
+# ── ROW 2: SECTIONS 3 AND 4 ──────────────────────────────
 col_s3, col_s4 = st.columns(2)
 
 with col_s3:
@@ -73,36 +59,22 @@ with col_s3:
         pain_intensity = st.slider("Pain Intensity (0 = no pain, 10 = worst possible)", 0, 10, 5)
     else:
         pain_intensity = 0
-
-    symptoms = st.multiselect(
-        "Select all symptoms that apply:",
-        [
-            "Pain", "Stiffness", "Limited range of motion", "Weakness / loss of strength",
-            "Numbness / tingling", "Swelling / inflammation", "Loss of balance",
-            "Difficulty walking", "Muscle spasms", "Fatigue", "Instability / giving way",
-            "Clicking / popping sounds", "Difficulty with daily activities", "Poor posture"
-        ]
-    )
-    aggravating_factors = st.text_input("What makes it worse?", placeholder="e.g. Walking, sitting too long, lifting...")
-    relieving_factors = st.text_input("What makes it better?", placeholder="e.g. Rest, heat, ice, specific positions...")
+    aggravating = st.text_input("What makes it worse?",
+        placeholder="e.g. Walking, sitting too long, lifting, certain movements...")
+    relieving = st.text_input("What makes it better?",
+        placeholder="e.g. Rest, heat, ice, specific positions...")
 
 with col_s4:
     st.subheader("④ Clinical History")
-    previous_history = st.text_area(
-        "Previous injuries, surgeries or medical conditions",
-        placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke, fractures...",
-        height=120
-    )
-    current_treatments = st.text_area(
-        "Current treatments or medications",
-        placeholder="e.g. Taking ibuprofen, wearing a brace, doing home exercises...",
-        height=100
-    )
-    additional_info = st.text_area(
-        "Any other relevant information",
-        placeholder="e.g. Patient goals, work requirements, sport they want to return to...",
-        height=100
-    )
+    previous_history = st.text_area("Previous injuries, surgeries or medical conditions",
+        placeholder="e.g. Knee surgery 2022, diabetes, herniated disc, stroke...",
+        height=100)
+    current_treatments = st.text_area("Current treatments or medications",
+        placeholder="e.g. Taking ibuprofen, wearing a brace, home exercises...",
+        height=80)
+    additional_info = st.text_area("Any other relevant information",
+        placeholder="e.g. Patient goals, sport they want to return to...",
+        height=80)
 
 st.divider()
 
@@ -117,16 +89,14 @@ run = st.button("🔍 Run AI Assessment", type="primary")
 
 # ── AI CALL ───────────────────────────────────────────────
 if run:
-    if not main_complaint.strip() or not body_area.strip():
-        st.error("⚠️ Please fill in at least the Main Complaint and Body Area Affected fields.")
+    if not (main_complaint or "").strip() or not (body_area or "").strip():
+        st.error("⚠️ Please fill in the Main Complaint and Body Area Affected fields.")
     else:
-        symptoms_text = ", ".join(symptoms) if symptoms else "Not specified"
-
         prompt = f"""You are an expert physiotherapist assistant. Analyze the following patient data and return ONLY a valid JSON object, with no extra text, no markdown, no backticks.
 
 PATIENT PROFILE:
 - Age: {age} | Gender: {gender}
-- Weight: {weight} kg | Height: {height} cm
+- Weight: {weight} kg | Height: {height_val} cm
 - Occupation: {occupation}
 - Physical activity: {physical_activity}
 
@@ -138,9 +108,8 @@ MAIN COMPLAINT:
 
 SYMPTOMS:
 - Pain present: {"Yes, intensity " + str(pain_intensity) + "/10" if has_pain else "No"}
-- Symptoms reported: {symptoms_text}
-- Aggravating factors: {aggravating_factors}
-- Relieving factors: {relieving_factors}
+- Aggravating factors: {aggravating}
+- Relieving factors: {relieving}
 
 CLINICAL HISTORY:
 - Previous injuries / conditions: {previous_history}
@@ -154,26 +123,14 @@ Return this exact JSON structure (all text in {language}):
   "confidence": "High / Medium / Low",
   "differential_diagnoses": [
     {{"name": "Condition name", "reason": "Brief reason why it must be considered"}},
-    {{"name": "Condition name", "reason": "Brief reason why it must be considered"}},
-    {{"name": "Condition name", "reason": "Brief reason why it must be considered"}}
+    {{"name": "Condition name", "reason": "Brief reason"}},
+    {{"name": "Condition name", "reason": "Brief reason"}}
   ],
   "red_flags": ["flag 1", "flag 2"],
   "treatment": {{
-    "acute": {{
-      "phase": "Acute Phase (Week 1-2)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }},
-    "recovery": {{
-      "phase": "Recovery Phase (Week 3-6)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }},
-    "functional": {{
-      "phase": "Functional Phase (Week 7+)",
-      "goals": "Goals for this phase",
-      "interventions": ["intervention 1", "intervention 2", "intervention 3"]
-    }}
+    "acute":      {{"phase": "Acute Phase (Week 1-2)",    "goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}},
+    "recovery":   {{"phase": "Recovery Phase (Week 3-6)", "goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}},
+    "functional": {{"phase": "Functional Phase (Week 7+)","goals": "Goals for this phase", "interventions": ["intervention 1", "intervention 2", "intervention 3"]}}
   }},
   "home_exercises": [
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
@@ -181,17 +138,13 @@ Return this exact JSON structure (all text in {language}):
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}},
     {{"name": "Exercise name", "description": "How to perform it", "frequency": "How often"}}
   ],
-  "referral": {{
-    "needed": "Yes / No",
-    "reason": "Explanation or null"
-  }},
+  "referral": {{"needed": "Yes / No", "reason": "Explanation or null"}},
   "follow_up": "Recommended follow-up timeframe"
 }}"""
 
         with st.spinner("🤖 Analyzing patient data... please wait"):
             try:
                 token = st.secrets["DATABRICKS_TOKEN"]
-
                 response = requests.post(
                     url="https://dbc-c0c5e61a-9d9c.cloud.databricks.com/ai-gateway/mlflow/v1/chat/completions",
                     headers={
@@ -204,37 +157,48 @@ Return this exact JSON structure (all text in {language}):
                         "messages": [{"role": "user", "content": prompt}]
                     }
                 )
-
                 result = response.json()
 
                 if "choices" in result:
                     content = result["choices"][0]["message"]["content"]
+
+                    # Handle list of blocks (reasoning + text)
                     if isinstance(content, list):
-                        raw = " ".join(block["text"] for block in content if block.get("type") == "text")
+                        raw = " ".join(b["text"] for b in content if b.get("type") == "text")
                     else:
                         raw = content
 
-                    # Clean and parse JSON
+                    # Clean markdown fences
                     clean = raw.replace("```json", "").replace("```", "").strip()
+
+                    # Extract JSON object — find first { to last }
+                    start = clean.find("{")
+                    end   = clean.rfind("}") + 1
+                    if start != -1 and end > start:
+                        clean = clean[start:end]
+
                     data = json.loads(clean)
 
-                    # ── DISPLAY RESULTS ───────────────────────────────
+                    # ── RESULTS ───────────────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
 
-                    # PRIMARY DIAGNOSIS
-                    confidence_color = {"High": "green", "Medium": "orange", "Low": "red"}.get(data.get("confidence", ""), "green")
+                    # Primary diagnosis
+                    confidence_color = {"High": "green", "Medium": "orange", "Low": "red"}.get(
+                        data.get("confidence", ""), "green")
                     st.markdown(f"""
-                    <div style="background-color:#f0f8ff; padding:20px; border-radius:10px; border-left:6px solid #1f77b4; margin-bottom:16px">
+                    <div style="background:#f0f8ff; padding:20px; border-radius:10px;
+                                border-left:6px solid #1f77b4; margin-bottom:16px">
                         <h2 style="margin:0; color:#1f77b4;">🔍 {data.get('primary_diagnosis', '')}</h2>
                         <p style="margin:8px 0 4px 0; color:#333;">{data.get('diagnosis_reasoning', '')}</p>
-                        <span style="background-color:{confidence_color}; color:white; padding:3px 12px; border-radius:20px; font-size:13px;">
+                        <span style="background:{confidence_color}; color:white; padding:3px 12px;
+                                     border-radius:20px; font-size:13px;">
                             Confidence: {data.get('confidence', '')}
                         </span>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # RED FLAGS
+                    # Red flags
                     red_flags = data.get("red_flags", [])
                     if red_flags:
                         st.error("🚨 **Red Flags Identified:**")
@@ -246,18 +210,19 @@ Return this exact JSON structure (all text in {language}):
                     st.markdown("---")
                     col_diag, col_ref = st.columns(2)
 
-                    # DIFFERENTIAL DIAGNOSES
+                    # Differentials
                     with col_diag:
                         st.markdown("### 🔄 Differential Diagnoses")
                         for i, diff in enumerate(data.get("differential_diagnoses", []), 1):
                             st.markdown(f"""
-                            <div style="background:#f9f9f9; border-radius:8px; padding:12px; margin-bottom:8px; border-left:4px solid #aaa;">
+                            <div style="background:#f9f9f9; border-radius:8px; padding:12px;
+                                        margin-bottom:8px; border-left:4px solid #aaa;">
                                 <strong>{i}. {diff.get('name', '')}</strong><br>
                                 <span style="color:#555; font-size:13px;">{diff.get('reason', '')}</span>
                             </div>
                             """, unsafe_allow_html=True)
 
-                    # REFERRAL
+                    # Referral
                     with col_ref:
                         st.markdown("### 📅 Referral & Follow-up")
                         referral = data.get("referral", {})
@@ -267,13 +232,11 @@ Return this exact JSON structure (all text in {language}):
                             st.success("**No referral needed**")
                         st.info(f"**Follow-up:** {data.get('follow_up', '')}")
 
+                    # Treatment plan
                     st.markdown("---")
-
-                    # TREATMENT PLAN
                     st.markdown("### 💊 Treatment Plan")
                     treatment = data.get("treatment", {})
                     tab1, tab2, tab3 = st.tabs(["🔴 Acute Phase", "🟡 Recovery Phase", "🟢 Functional Phase"])
-
                     for tab, phase_key in zip([tab1, tab2, tab3], ["acute", "recovery", "functional"]):
                         with tab:
                             phase = treatment.get(phase_key, {})
@@ -282,18 +245,18 @@ Return this exact JSON structure (all text in {language}):
                             for item in phase.get("interventions", []):
                                 st.markdown(f"- {item}")
 
+                    # Home exercises
                     st.markdown("---")
-
-                    # HOME EXERCISES
                     st.markdown("### 🏃 Home Exercise Program")
                     exercises = data.get("home_exercises", [])
                     cols = st.columns(len(exercises)) if exercises else []
                     for col, ex in zip(cols, exercises):
                         with col:
                             st.markdown(f"""
-                            <div style="background:#f0fff0; border-radius:10px; padding:14px; border-top:4px solid #2ca02c; height:100%;">
+                            <div style="background:#f0fff0; border-radius:10px; padding:14px;
+                                        border-top:4px solid #2ca02c;">
                                 <strong>💪 {ex.get('name', '')}</strong><br><br>
-                                <span style="font-size:13px; color:#333;">{ex.get('description', '')}</span><br><br>
+                                <span style="font-size:13px;">{ex.get('description', '')}</span><br><br>
                                 <span style="font-size:12px; color:#2ca02c;">🕐 {ex.get('frequency', '')}</span>
                             </div>
                             """, unsafe_allow_html=True)
@@ -305,7 +268,7 @@ Return this exact JSON structure (all text in {language}):
                     st.error("API Error: " + json.dumps(result, indent=2))
 
             except json.JSONDecodeError:
-                st.error("Could not parse the AI response. Please try again.")
-                st.code(raw)
+                st.error("Could not parse AI response. Raw output:")
+                st.code(clean)
             except Exception as e:
                 st.error(f"Something went wrong: {str(e)}")
