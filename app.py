@@ -36,7 +36,7 @@ st.subheader("② Pain Assessment")
 
 col7, col8 = st.columns(2)
 with col7:
-    pain_location = st.text_input("Pain Location", placeholder="e.g. Lower back, left knee, right shoulder...")
+    pain_location = st.text_input("Pain Location *", placeholder="e.g. Lower back, left knee, right shoulder...")
 with col8:
     pain_duration = st.text_input("Pain Duration", placeholder="e.g. 3 weeks, 6 months...")
 
@@ -75,8 +75,9 @@ run = st.button("🔍 Run AI Assessment", type="primary", use_container_width=Tr
 
 # ── AI CALL ───────────────────────────────────────────────
 if run:
-    if not pain_location:
-        st.error("Please enter the pain location before running the assessment.")
+    # Validate only when button is clicked
+    if not pain_location.strip():
+        st.error("⚠️ Please enter the Pain Location field before running the assessment.")
     else:
         prompt = f"""You are an expert physiotherapist assistant. Analyze the following patient data and provide a structured clinical assessment.
 
@@ -138,7 +139,7 @@ IMPORTANT: Please write your entire response in {language}.
                     # ── DISPLAY RESULTS ───────────────────────────────
                     st.divider()
                     st.subheader("📋 AI Assessment Results")
-                    st.success(f"Assessment complete — response in {language}")
+                    st.success(f"✅ Assessment complete — response in {language}")
                     st.markdown(answer)
                     st.divider()
                     st.warning("⚠️ AI-assisted screening only. Must be reviewed by a qualified physiotherapist.")
